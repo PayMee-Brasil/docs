@@ -1595,10 +1595,6 @@
                         },
                         "instructions": {
                           "chosen": "PIX",
-                          "keys": {
-                            "document": "00000000000000",
-                            "email": "pix@paymee.com.br"
-                          },
                           "label": "Transferência via PIX",
                           "name": "PIX",
                           "qrCode": {
