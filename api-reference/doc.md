@@ -51,7 +51,7 @@ Amongst other features, the attributes that stand out the most in the PayMee pla
 
 **Simplicity**: the protocol used is purely HTTPS.
 
-**Ease of testing**: the PayMee platform offers a publicly accessible Sandbox environment, which allows the developer to create a [test account](https://apisandbox.paymee.com.br/register) making it easier and faster to start integration.
+**Ease of testing**: the PayMee platform offers a publicly accessible Sandbox environment, which allows the developer to create a [test account](https://sandbox.paymee.com.br/register) making it easier and faster to start integration.
 
 **Credentials**: handling of the customer’s credentials (**x-api-key** and **x-api-token**) traffics in the header of the HTTP request of the message.
 
@@ -101,7 +101,7 @@ To facilitate testing during integration, PayMee offers a Sandbox environment, w
 Advantages of using the Sandbox  
 No affiliation is required to use PayMee's Sandbox. You just have to access the Sandbox Registration, create an account and, with it, receive a **x-api-key** and a **x-api-token**, which are the credentials required for the API methods.
 
-You can create your sandbox account here: [<b>https://apisandbox.paymee.com.br/register</b>](https://apisandbox.paymee.com.br/register)
+You can create your sandbox account here: [<b>https://sandbox.paymee.com.br/register</b>](https://sandbox.paymee.com.br/register)
 
 # Webhook
 
