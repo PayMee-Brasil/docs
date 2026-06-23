@@ -93,7 +93,8 @@
               "api-reference/cancel-authorization",
               "api-reference/list-scheduled-payments",
               "api-reference/get-scheduled-payment-by-id",
-              "api-reference/cancel-scheduled-payment"
+              "api-reference/cancel-scheduled-payment",
+              "api-reference/test-pix-automatic-in-sandbox"
             ]
           }
         ]

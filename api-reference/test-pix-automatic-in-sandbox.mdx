@@ -1,0 +1,115 @@
+---
+title: 'Testing Pix Automatic in Sandbox'
+description: 'Drive the full Pix Automatic recurrence lifecycle in the Sandbox using the simulator endpoints — authorize, charge, settle, fail and cancel without a real payer.'
+---
+
+## Overview
+
+Pix Automatic depends on asynchronous webhooks sent by the acquirer (mandate approvals, scheduled charges, settlements, failures). In the Sandbox, PayMee exposes a **simulator** that produces those exact webhooks and feeds them to the same handlers used in production, so you can exercise the entire recurrence lifecycle end to end without a real payer.
+
+All simulator endpoints live under:
+
+```
+https://apisandbox.paymee.com.br/v1.1/pix-automatic/sandbox/sim
+```
+
+<Note>
+These endpoints exist **only** in the Sandbox. They authenticate with the same `x-api-key` and `x-api-token` as the rest of the API and act only on recurrences that belong to your test merchant.
+</Note>
+
+## Authentication
+
+Every simulator call requires both headers:
+
+```http
+x-api-key: <your-sandbox-key>
+x-api-token: <your-sandbox-token>
+Content-Type: application/json
+```
+
+## Typical end-to-end flow
+
+<Steps>
+  <Step title="Create a plan">
+    `POST /v1.1/pix-automatic/plans` — defines the frequency and amount of the recurrence.
+  </Step>
+  <Step title="Create the recurrence (checkout)">
+    `POST /v1.1/checkout/pix-automatic` — returns an `idRec` for the new authorization, which starts in `CREATED`.
+  </Step>
+  <Step title="Authorize the mandate">
+    `POST /sandbox/sim/mandate/{idRec}/approved` — drives the approval and moves the recurrence to `APPROVED`. A `RECURRENCE_AUTHORIZED` webhook is emitted.
+  </Step>
+  <Step title="Generate the due charge">
+    `POST /sandbox/sim/recurrence/{idRec}/run-due` — generates the next scheduled collection (a sale) for recurrences whose next charge falls within the due window.
+  </Step>
+  <Step title="Settle or fail the charge">
+    `POST /sandbox/sim/collection/{txId}/concluded` to settle, or `POST /sandbox/sim/collection/{txId}/reject/{code}` to fail with a reason code.
+  </Step>
+</Steps>
+
+<Tip>
+Each individual `mandate` action drives the full prerequisite sequence automatically. Calling `.../mandate/{idRec}/approved` on a recurrence still in `CREATED` first drives `APPROVING` and then `APPROVED`, so the action works from any starting state.
+</Tip>
+
+## Mandate (authorization) endpoints
+
+| Endpoint                                            | Effect                                                |
+| :-------------------------------------------------- | :---------------------------------------------------- |
+| `POST /sandbox/sim/mandate/{idRec}/approving`       | Marks the authorization as in progress (`APPROVING`). |
+| `POST /sandbox/sim/mandate/{idRec}/approved`        | Approves the mandate (`APPROVED`).                    |
+| `POST /sandbox/sim/mandate/{idRec}/rejected`        | Rejects the authorization (`REJECTED`).              |
+| `POST /sandbox/sim/mandate/{idRec}/expired`         | Expires the authorization request (`EXPIRED`).       |
+| `POST /sandbox/sim/mandate/{idRec}/cancelling`      | Starts cancellation (`CANCELLING`).                  |
+| `POST /sandbox/sim/mandate/{idRec}/cancelled`       | Completes cancellation (`CANCELLED`).                |
+
+## Collection (charge) endpoints
+
+| Endpoint                                              | Effect                                                            |
+| :--------------------------------------------------- | :--------------------------------------------------------------- |
+| `POST /sandbox/sim/recurrence/{idRec}/run-due`        | Generates the next due collection (sale) for the recurrence.     |
+| `POST /sandbox/sim/collection/{txId}/active`          | Marks the collection as active/scheduled.                        |
+| `POST /sandbox/sim/collection/{txId}/concluded`       | Settles the collection and credits the merchant balance.         |
+| `POST /sandbox/sim/collection/{txId}/failed`          | Fails the collection (insufficient funds).                       |
+| `POST /sandbox/sim/collection/{txId}/canceled`        | Cancels the collection.                                          |
+| `POST /sandbox/sim/collection/{txId}/reject/{code}`   | Rejects the collection with a specific reason code (see below).   |
+| `POST /sandbox/sim/collection/{txId}/retry`           | Triggers the retry sweep for failed collections (3R/7D policy).  |
+
+## One-shot scenarios
+
+For convenience, composite scenarios drive a whole sequence in a single call:
+
+```
+POST /v1.1/pix-automatic/sandbox/sim/recurrence/{idRec}/scenario/{name}
+```
+
+| `name`               | Sequence driven                                                              |
+| :------------------- | :-------------------------------------------------------------------------- |
+| `approve-and-settle` | Approve the mandate, generate the first charge, settle it and conclude.     |
+| `no-funds-3x`        | Approve, then fail the charge repeatedly to exercise the retry policy.      |
+| `approve-reject`     | Approve the request, then reject it.                                        |
+| `cancel-by-payer`    | Approve the mandate, then cancel it on the payer's side.                    |
+
+## Failure reason codes
+
+Use these codes with `.../collection/{txId}/reject/{code}` (or `.../recurrence/{idRec}/fail/{code}`):
+
+| Code   | Meaning                                  |
+| :----- | :--------------------------------------- |
+| `FAIL` / `AM04` | Insufficient funds in the payer's account |
+| `AC06` | Payer's account is blocked               |
+| `AC03` / `AC01` | Invalid payer account           |
+| `MD01` | Authorization missing or revoked         |
+| `SL02` | Pix Automatic limit exceeded             |
+| `AG03` | Operation not allowed for the account    |
+| `AB09` | Failure at the payer's PSP               |
+| `SLCR` | Cancellation requested                   |
+
+<Note>
+The due window for `run-due` is `[now + 2 days, now + 10 days]`. A freshly created recurrence whose next charge date is outside this window will not generate a collection until its next cycle approaches; the `approve-and-settle` scenario handles the first charge for you.
+</Note>
+
+## Related
+
+<Card title="Webhook Notifications" icon="bell" href="/api-reference/webhook">
+  See the Pix Automatic (Recurrence) notification payloads emitted during these flows.
+</Card>
