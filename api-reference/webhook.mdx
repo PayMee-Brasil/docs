@@ -112,7 +112,7 @@ Content-Type: application/json
 
 ## Pix Automatic (Recurrence) Notification
 
-These notifications track the lifecycle of a Pix Automatic **mandate** (the recurrence/authorization) — not the individual charges. They are sent whenever the authorization status changes. The event is identified by the `eventType` field:
+These notifications cover a Pix Automatic recurrence: the **mandate lifecycle** (authorization → conclusion) and **each paid charge**. The event is identified by the `eventType` field:
 
 | `eventType`               | When it is sent                                                                 |
 | :------------------------ | :------------------------------------------------------------------------------ |
@@ -121,9 +121,10 @@ These notifications track the lifecycle of a Pix Automatic **mandate** (the recu
 | `RECURRENCE_EXPIRED`      | The authorization request was not answered in time and expired (`EXPIRED`).      |
 | `RECURRENCE_CANCELLED`    | The mandate was cancelled, by either party (`CANCELLED`).                         |
 | `RECURRENCE_CONCLUDED`    | The recurrence reached the end of its agreed period (`CONCLUDED`).               |
+| `RECURRENCE_CHARGE_PAID`  | A scheduled charge (cycle) of the recurrence was paid. Carries the paid `saleToken` and `chargeAmount`. |
 
 <Note>
-**Each paid charge of a recurrence is notified with a standard [`PAYMENT_CONFIRMATION`](#payment-confirmation-notification) webhook** — the same notification as any other Pix payment. So a plan with 20 paid cycles produces 20 `PAYMENT_CONFIRMATION` notifications. Identify each one by its unique `saleToken`; the `referenceCode` carries the recurrence `externalId`, telling you which recurrence the charge belongs to. The `RECURRENCE_*` events above are only for the mandate lifecycle (authorization → conclusion), never for individual charges. You can also reconcile charges at any time via `GET /v1.1/pix-automatic/scheduled-payments`. All dates are in `America/Sao_Paulo` (GMT-3).
+**Each paid charge produces two webhooks:** a standard [`PAYMENT_CONFIRMATION`](#payment-confirmation-notification) (identical to any Pix payment) **and** a `RECURRENCE_CHARGE_PAID`. Use `RECURRENCE_CHARGE_PAID` to tie the payment to its recurrence and plan: it always carries `idRec`, your `externalId`, `planId` and the `saleToken`/`chargeAmount` of that specific charge. The `saleToken` matches the one in the corresponding `PAYMENT_CONFIRMATION`, so you can join the two. A plan with 20 paid cycles therefore produces 20 of each. You can also reconcile at any time via `GET /v1.1/pix-automatic/scheduled-payments`. All dates are in `America/Sao_Paulo` (GMT-3).
 </Note>
 
 **Example Notification POST:**
@@ -154,6 +155,25 @@ Content-Type: application/json
 }
 ```
 
+**Example `RECURRENCE_CHARGE_PAID` (a paid charge):**
+
+```json
+{
+  "eventType": "RECURRENCE_CHARGE_PAID",
+  "idRec": "RR286838922026062203474822291",
+  "externalId": "your-order-ref-001",
+  "planId": "6a38da8623711b0007b267a6",
+  "status": "APPROVED",
+  "amount": 15.00,
+  "payerDocument": "12345678909",
+  "payerName": "John Doe",
+  "nextRecurrenceDate": "2026-07-25 00:00:00",
+  "saleToken": "2ce02094-ab3b-4649-aac8-1a8f122b0ca1",
+  "chargeAmount": 15.00,
+  "eventDate": "2026-06-23 16:54:22"
+}
+```
+
 **Response Payload Fields:**
 
 | Property              | Type   | Description                                                                 |
@@ -173,6 +193,8 @@ Content-Type: application/json
 | `initialDate`         | string | Start date of the recurrence (`yyyy-MM-dd HH:mm:ss`).                       |
 | `finalDate`           | string | End date of the recurrence, or `null` if open-ended.                       |
 | `nextRecurrenceDate`  | string | Date of the next scheduled charge (`yyyy-MM-dd HH:mm:ss`).                  |
+| `saleToken`           | string | **`RECURRENCE_CHARGE_PAID` only.** Token of the paid charge — matches the `saleToken` of the corresponding `PAYMENT_CONFIRMATION`. |
+| `chargeAmount`        | number | **`RECURRENCE_CHARGE_PAID` only.** Amount of that specific paid charge.     |
 | `eventDate`           | string | Timestamp the notification was generated (`yyyy-MM-dd HH:mm:ss`).          |
 
 **Requirements:**
