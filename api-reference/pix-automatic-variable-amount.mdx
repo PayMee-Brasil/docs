@@ -1,0 +1,74 @@
+---
+title: "Variable Amount (Dynamic Pricing)"
+description: "Recurring charges that follow the current plan amount — update the plan, next charges follow"
+---
+
+Pix Automático subscriptions come in two pricing modes, defined at checkout by `recurrence.amount.valueType`:
+
+| Mode | What the payer authorizes | Can the charge amount change? |
+|---|---|---|
+| `FIXED` (default) | An exact amount (e.g. R$ 15,00/month) | No. Banco Central locks the mandate to the authorized amount — a mismatching charge is rejected by the payer's bank (`AM09`). |
+| `VARIABLE` | A **minimum** amount (`debitorMinimumAmount`) | Yes. Each cycle is charged with the plan's current `recurrenceAmount`. |
+
+## Creating a variable-amount subscription
+
+Send `valueType: "VARIABLE"` and the authorized minimum in the checkout:
+
+```json
+POST /v1.1/checkout/pix-automatic
+{
+  "currency": "BRL",
+  "referenceCode": "order-123",
+  "shopper": { ... },
+  "recurrence": {
+    "planId": "6a45a170c8ad05000722084d",
+    "immediatePayment": false,
+    "retry": true,
+    "amount": {
+      "valueType": "VARIABLE",
+      "debitorMinimumAmount": 10.00
+    },
+    "calendar": {
+      "initialDate": "2026-08-01T00:00:00.000-03:00",
+      "periodicity": "MONTHLY"
+    }
+  }
+}
+```
+
+The payer sees and authorizes "variable amount, minimum R$ 10,00" in their bank app.
+
+<Note>
+In the merchant panel, tick **"Valor variável (segue o plano)"** in the New Recurrence modal to create the subscription in this mode. The recurrence amount field becomes the authorized minimum.
+</Note>
+
+## How each charge is priced
+
+For every cycle of a `VARIABLE` subscription the engine resolves the amount in this order:
+
+1. A one-off amount set for the next cycle via [`PUT /authorizations/{idRec}/cycle-amount`](/api-reference/cancel-authorization), if any (cleared after use);
+2. The plan's **current** `recurrenceAmount`;
+3. The authorized minimum (`debitorMinimumAmount`), as fallback.
+
+The resolved amount is never below the authorized minimum. If it exceeds the maximum the payer configured at their bank, the charge is rejected with `AM02` and reported through the `RECURRENCE_CHARGE_FAILED` webhook.
+
+## Updating the plan amount
+
+Update the plan; the **next** charges of every variable subscription linked to it follow the new value automatically:
+
+```json
+PUT /v1.1/pix-automatic/plans/{planId}
+{
+  "recurrenceAmount": 22.50
+}
+```
+
+In the merchant panel, use the pencil icon on the Plans tab.
+
+<Warning>
+`FIXED` subscriptions are never affected by plan edits — the payer authorized an exact amount. To change the price of a fixed subscription, cancel it and create a new one (new payer authorization via QR code).
+</Warning>
+
+## Already-scheduled charges
+
+A charge already registered at the payer's bank (status `SCHEDULED`) keeps its amount. Plan edits apply from the next cycle the engine schedules (charges are registered 2–10 days before their due date, per Banco Central rules).
