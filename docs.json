@@ -84,8 +84,10 @@
           {
             "group": "Pix Automatic (Recurrence)",
             "pages": [
+              "api-reference/pix-automatic-variable-amount",
               "api-reference/create-pix-automatic-checkout",
               "api-reference/create-plan",
+              "api-reference/update-plan",
               "api-reference/list-plans",
               "api-reference/get-plan-by-id",
               "api-reference/list-authorizations",

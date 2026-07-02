@@ -7646,8 +7646,102 @@
             }
           }
         }
+      },
+      "put": {
+        "summary": "Update Plan",
+        "description": "Updates an existing recurrence plan. All fields are optional; only the fields sent are changed. Changing recurrenceAmount immediately affects the NEXT charges of every active subscription created with variable amount (valueType VARIABLE). Fixed-amount subscriptions keep the amount authorized by the payer (Banco Central rule) and are not affected.",
+        "operationId": "updateRecurrencePlan",
+        "tags": [
+          "Pix Automatic (Recurrence)"
+        ],
+        "parameters": [
+          {
+            "name": "planId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The plan id (24-char ObjectId) returned on creation."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 100
+                  },
+                  "description": {
+                    "type": "string",
+                    "minLength": 5,
+                    "maxLength": 35
+                  },
+                  "frequency": {
+                    "type": "string",
+                    "enum": [
+                      "WEEKLY",
+                      "MONTHLY",
+                      "QUARTERLY",
+                      "SEMIANNUAL",
+                      "ANNUALLY"
+                    ]
+                  },
+                  "period": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "Number of occurrences. 0 = open-ended. Applies to new subscriptions only."
+                  },
+                  "imediateAmount": {
+                    "type": "number",
+                    "minimum": 0.01
+                  },
+                  "recurrenceAmount": {
+                    "type": "number",
+                    "minimum": 0.01,
+                    "description": "Current plan amount. Next charges of VARIABLE subscriptions follow this value."
+                  },
+                  "minimumRecurrenceAmount": {
+                    "type": "number",
+                    "minimum": 0.01
+                  },
+                  "retryPolicy": {
+                    "type": "string",
+                    "enum": [
+                      "NOT_ACCEPT",
+                      "ACCEPT_3R_7D"
+                    ]
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  }
+                },
+                "example": {
+                  "recurrenceAmount": 22.5
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Plan updated. Returns the full updated plan."
+          },
+          "400": {
+            "description": "Validation failure (e.g. amount below 0.01, title too short)."
+          },
+          "404": {
+            "description": "Plan not found or not owned by the authenticated merchant."
+          }
+        }
       }
-    },
+},
     "/v1.1/pix-automatic/scheduled-payments": {
       "get": {
         "tags": [
