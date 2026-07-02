@@ -121,10 +121,12 @@ These notifications cover a Pix Automatic recurrence: the **mandate lifecycle** 
 | `RECURRENCE_EXPIRED`      | The authorization request was not answered in time and expired (`EXPIRED`).      |
 | `RECURRENCE_CANCELLED`    | The mandate was cancelled, by either party (`CANCELLED`).                         |
 | `RECURRENCE_CONCLUDED`    | The recurrence reached the end of its agreed period (`CONCLUDED`).               |
+| `RECURRENCE_CHARGE_SCHEDULED` | A new charge (cycle) was registered at the payer's bank. Carries `chargeDueDate` and `chargeAmount`. |
 | `RECURRENCE_CHARGE_PAID`  | A scheduled charge (cycle) of the recurrence was paid. Carries the paid `saleToken` and `chargeAmount`. |
+| `RECURRENCE_CHARGE_FAILED` | A charge failed or was rejected (e.g. insufficient funds). Carries `rejectionCode`, `rejectionReason` and `retryScheduled` (whether an automatic retry was scheduled). |
 
 <Note>
-**Each paid charge produces two webhooks:** a standard [`PAYMENT_CONFIRMATION`](#payment-confirmation-notification) (identical to any Pix payment) **and** a `RECURRENCE_CHARGE_PAID`. Use `RECURRENCE_CHARGE_PAID` to tie the payment to its recurrence and plan: it always carries `idRec`, your `externalId`, `planId` and the `saleToken`/`chargeAmount` of that specific charge. The `saleToken` matches the one in the corresponding `PAYMENT_CONFIRMATION`, so you can join the two. A plan with 20 paid cycles therefore produces 20 of each. You can also reconcile at any time via `GET /v1.1/pix-automatic/scheduled-payments`. All dates are in `America/Sao_Paulo` (GMT-3).
+Recurring charges are notified **exclusively** through the `RECURRENCE_*` events — they do **not** emit the generic [`PAYMENT_CONFIRMATION`](#payment-confirmation-notification) (only the optional immediate payment of a Journey-3 checkout does, since it carries your own order `referenceCode`). Each charge cycle produces `RECURRENCE_CHARGE_SCHEDULED` when registered, then `RECURRENCE_CHARGE_PAID` or `RECURRENCE_CHARGE_FAILED`. Every event carries `idRec`, your `externalId`, `planId` and, for charge events, the `saleToken` of that specific charge for reconciliation. You can also reconcile at any time via `GET /v1.1/pix-automatic/scheduled-payments`. All dates are in `America/Sao_Paulo` (GMT-3).
 </Note>
 
 **Example Notification POST:**
@@ -170,7 +172,32 @@ Content-Type: application/json
   "nextRecurrenceDate": "2026-07-25 00:00:00",
   "saleToken": "2ce02094-ab3b-4649-aac8-1a8f122b0ca1",
   "chargeAmount": 15.00,
+  "chargeDueDate": "2026-06-25 00:00:00",
+  "chargeStatus": "PAID",
   "eventDate": "2026-06-23 16:54:22"
+}
+```
+
+**Example `RECURRENCE_CHARGE_FAILED` (a failed charge):**
+
+```json
+{
+  "eventType": "RECURRENCE_CHARGE_FAILED",
+  "idRec": "RR286838922026062203474822291",
+  "externalId": "your-order-ref-001",
+  "planId": "6a38da8623711b0007b267a6",
+  "status": "APPROVED",
+  "amount": 15.00,
+  "payerDocument": "12345678909",
+  "payerName": "John Doe",
+  "saleToken": "bae33c40-df9f-4fd4-ba9a-cbf7cca1a622",
+  "chargeAmount": 15.00,
+  "chargeDueDate": "2026-07-25 00:00:00",
+  "chargeStatus": "REJECTED",
+  "rejectionCode": "AM04",
+  "rejectionReason": "Saldo insuficiente na conta do pagador",
+  "retryScheduled": true,
+  "eventDate": "2026-07-25 08:00:12"
 }
 ```
 
@@ -193,8 +220,13 @@ Content-Type: application/json
 | `initialDate`         | string | Start date of the recurrence (`yyyy-MM-dd HH:mm:ss`).                       |
 | `finalDate`           | string | End date of the recurrence, or `null` if open-ended.                       |
 | `nextRecurrenceDate`  | string | Date of the next scheduled charge (`yyyy-MM-dd HH:mm:ss`).                  |
-| `saleToken`           | string | **`RECURRENCE_CHARGE_PAID` only.** Token of the paid charge — matches the `saleToken` of the corresponding `PAYMENT_CONFIRMATION`. |
-| `chargeAmount`        | number | **`RECURRENCE_CHARGE_PAID` only.** Amount of that specific paid charge.     |
+| `saleToken`           | string | **Charge events only.** Token of that specific charge (use it for reconciliation). |
+| `chargeAmount`        | number | **Charge events only.** Amount of that specific charge.                    |
+| `chargeDueDate`       | string | **Charge events only.** Due date of that charge (`yyyy-MM-dd HH:mm:ss`).   |
+| `chargeStatus`        | string | **Charge events only.** Status of the charge (`SCHEDULED`, `PAID`, `FAILED`, `REJECTED`, `CANCELLED`). |
+| `rejectionCode`       | string | **`RECURRENCE_CHARGE_FAILED` only.** Bacen reason code (e.g. `AM04` insufficient funds, `AC06` blocked account). |
+| `rejectionReason`     | string | **`RECURRENCE_CHARGE_FAILED` only.** Human-readable description of the failure. |
+| `retryScheduled`      | boolean | **`RECURRENCE_CHARGE_FAILED` only.** `true` when an automatic retry was scheduled (mandates with `ACCEPT_3R_7D`). |
 | `eventDate`           | string | Timestamp the notification was generated (`yyyy-MM-dd HH:mm:ss`).          |
 
 **Requirements:**
