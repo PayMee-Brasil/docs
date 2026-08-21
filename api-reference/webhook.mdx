@@ -110,6 +110,59 @@ Content-Type: application/json
 
 ---
 
+## Loan Status Notification
+
+The loan status notification reports credit decision changes for BNPL transactions. It uses a PayMee-owned contract so integrations do not depend on a credit provider's payload.
+
+<Warning>
+This webhook contract is currently in preview and is published for integration planning. Do not rely on it in production until PayMee confirms enablement for your account.
+</Warning>
+
+The `status` field can contain:
+
+| `status`    | When it is sent |
+| :---------- | :-------------- |
+| `APPROVED`  | The credit proposal was approved and the BNPL contract was completed. |
+| `DENIED`    | The credit proposal was declined. |
+| `ABANDONED` | The customer did not complete the onboarding flow before expiration. |
+
+**Example Notification POST:**
+
+```http
+POST /your-callback-path HTTP/1.1
+Host: your-registered-domain.com
+Authorization: Basic <Your Base64 Encoded Credentials>
+Content-Type: application/json
+
+{
+  "eventType": "LOAN_STATUS_CHANGED",
+  "saleToken": "d59b39ce-bffd-3f6d-80c4-c376a242afd1",
+  "referenceCode": "order-00000014",
+  "status": "APPROVED",
+  "date": "2026-08-21 10:48:56"
+}
+```
+
+**Response Payload Fields:**
+
+| Property        | Type   | Description |
+| :-------------- | :----- | :---------- |
+| `eventType`     | string | Event identifier. Always `LOAN_STATUS_CHANGED`. |
+| `saleToken`     | string | PayMee UUID of the BNPL transaction. |
+| `referenceCode` | string | Merchant order identifier provided when the loan transaction was created. |
+| `status`        | string | Current credit decision: `APPROVED`, `DENIED`, or `ABANDONED`. |
+| `date`          | string | Event timestamp in `America/Sao_Paulo` (`yyyy-MM-dd HH:mm:ss`). |
+
+<Note>
+Loan approval is distinct from an installment payment. When the associated merchant transaction is financially confirmed, PayMee sends the standard [`PAYMENT_CONFIRMATION`](#payment-confirmation-notification) webhook. Overdue installment and chargeback events are not part of the loan status contract.
+</Note>
+
+**Requirements:**
+* A valid **Payment Status URL** must be configured in your PayMee merchant panel settings.
+* Your endpoint must follow the authentication, acknowledgement, retry, and idempotency requirements described above.
+
+---
+
 ## Pix Automatic (Recurrence) Notification
 
 These notifications cover a Pix Automatic recurrence: the **mandate lifecycle** (authorization → conclusion) and **each paid charge**. The event is identified by the `eventType` field:
