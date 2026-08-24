@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "API PayMee 1.1",
-    "description": "# Overview\n\nThe purpose of this documentation is to guide the developer on how to integrate with PayMee, describing the features and methods to be used, listing information to be sent and received as well as providing examples.\n\nThe integration mechanism with PayMee is simple, so only intermediate knowledge in Web programming language, HTTP/HTTPS requests and JSON file manipulation are required to successfully deploy the PayMee solution.\n\nIn this manual you will find reference to all operations available on the API REST of the PayMee API. These operations must be performed using specific keys (**x-api-key** and **x-api-token**) on the respective environment endpoints:\n\nProduction Environment\n\n[<b>https://api.paymee.com.br/</b>](https://api.paymee.com.br/)\n\nSandbox Environment\n\n[<b>https://apisandbox.paymee.com.br/</b>](https://apisandbox.paymee.com.br/)\n\nTo perform an operation, combine the base URL of the environment with the resource (URI) of the desired operation and send it using the HTTP verb as described in the operation.\n\n# Solution features\n\nThe API solution of the PayMee platform was developed with REST technology, which is the market standard and also independent from the technology used by other parties. This way, it is possible to integrate it through the great majority of programming languages, such as: ASP, ASP. Net, Java, PHP, Ruby, Python, etc.\n\nAmongst other features, the attributes that stand out the most in the PayMee platform are:\n\n**No proprietary apps**: it is not necessary to install any applications in the virtual shop environment, under no circumstances.\n\n**Simplicity**: the protocol used is purely HTTPS.\n\n**Ease of testing**: the PayMee platform offers a publicly accessible Sandbox environment, which allows the developer to create a [test account](https://sandbox.paymee.com.br/register) making it easier and faster to start integration.\n\n**Credentials**: handling of the customer’s credentials (**x-api-key** and **x-api-token**) traffics in the header of the HTTP request of the message.\n\n**Safety**: the information exchange always takes place between the store's Server and PayMee's Server, that is, without the buyer’s browser in between.\n\n**Multiplatform**: the integration is performed through the REST Web Service.\n\n# Architecture\n\nIntegration is performed through Web Services. The model employed is quite simple: There are two URLs (endpoints) available: a specific one for production (real time operation), and a specific one for testing, called sandbox.\n\nThese URLs receive the HTTP messages through the **POST**, **GET** or **PUT** methods. Each message type must be sent to a resource identified through the path.\n\n| **METHOD** | **DESCRIPTION** |\n| --- | --- |\n| POST | The **POST** HTTP method is used in the creation of resources or sending information that will be processed. For example, creation of a transaction. |\n| PUT | The **PUT** HTTP method is used to update an already existing resource. For example, refunding or cancelation of a previous transaction. |\n| GET | The **GET** HTTP method is used for querying already existing resources. For example, transaction query. |\n\n## Supported Payment Methdos\n\nThe current version of PayMee Webservice supports the following payment methods:\n\n| BANK | WIRE TRANSFER | CASH | CREDIT CARD |\n| --- | --- | --- | --- |\n| 001 - BANCO DO BRASIL | YES | YES | NO |\n| 237 - BANCO BRADESCO | YES | NO | NO |\n| 104 - BANCO CAIXA ECONOMICA FEDERAL | YES | NO | NO |\n| 341 - BANCO ITAÚ-UNIBANCO | YES | YES | NO |\n| 033 - BANCO SANTANDER BRASIL | YES | YES | NO |\n| 212 - BANCO ORIGINAL | YES | NO | NO |\n| 077 - BANCO INTER | YES | NO | NO |\n| 218 - BANCO BS2 | YES | NO | NO |\n| PIX | YES | NO | NO |\n| CREDIT CARD | NO | NO | YES |\n\n# Sandbox and Tools\n\n## About Sandbox\n\nTo facilitate testing during integration, PayMee offers a Sandbox environment, which is composed by two areas:\n\n- Test account register\n- Transactional Endpoint\n    - Request: [https://apisandbox.paymee.com.br](https://apisandbox.paymee.com.br)\n\nAdvantages of using the Sandbox  \nNo affiliation is required to use PayMee's Sandbox. You just have to access the Sandbox Registration, create an account and, with it, receive a **x-api-key** and a **x-api-token**, which are the credentials required for the API methods.\n\nYou can create your sandbox account here: [<b>https://sandbox.paymee.com.br/register</b>](https://sandbox.paymee.com.br/register)\n\n# Webhook\n\n## Notification Post\n\nThe Notification Post is sent based on a selection of events to be made in the PayMee registry.\n\nThe events that can be notified are:\n\n| EVENT TYPE | EVENT |\n| --- | --- |\n| SALE | PAID |\n| REVERSAL | CREATE/PAID |\n\nPayMee's send the notifications to the URL that you have configured using the HTTP protocol, by the POST method.\n\n**Authentication**\n\nBasic http auth.  \nThe username is your **x-api-key** and password is your **x-api-token**\n\n**Base64 Basic Auth reference:**\n\n**x-api-key** = af38b751-30d7-4261-a9fb-ea30f6ece609\n\n**x-api-token** = 28331f43-e2b3-4078-9502-5f656fb66cdf\n\n### TRANSFER/WALK-IN NOTIFICATION (PAYMENT CONFIRMATION)\n\nHere is an example of a notification sent by PayMee (the lines have been broken for ease of reading):\n\n```\nPOST /callback HTTP/1.1\nAuthorization: Basic YWYzOGI3NTEtMzBkNy00MjYxLWE5ZmItZWEzMGY2ZWNlNjA5OjI4MzMxZjQzLWUyYjMtNDA3OC05NTAyLTVmNjU2ZmI2NmNkZg==\nContent-Length:272\nContent-Type:application/json\n{\n  \"saleToken\": \"d59b39ce-bffd-3f6d-80c4-c376a242afd1\",\n  \"referenceCode\":\"0000000000014\",\n   \"currency\": \"BRL\",\n   \"amount\":100.00,\n   \"shopper\":{\n    \"id\": \"12911\",\n    \"firstName\":\"Teste\",\n    \"lastName\":\"Silva\",\n    \"email\":\"teste@teste.com.br\",\n    \"agency\": \"1234\",\n    \"account\": \"123456-0\"\n   },\n  \"date\":\"2017-07-28 10:48:56\",\n  \"newStatus\": \"PAID\"\n}\n\n ```\n\nA Payment Status URL must be registered, so that the notification POST is executed.\n\nThe callback URL should return the HTTP status 200. Otherwise PayMee will try again in 60-seconds interval for a maximum of 5 (five) attempts.\n\n## Response\n\n| **PROPERTY** | **TYPE** | **DESCRIPTION** |\n| --- | --- | --- |\n| saleToken | string | transaction UUID |\n| referenceCode | string | order identification |\n| amount | number | order amount |\n| shopper.firstName | string | shopper's first name |\n| shopper.firstName | string | shopper's last name |\n| shopper.email | string | shopper's email |\n| shopper.agency | string | shopper's agency |\n| shopper.account | string | shopper's account |\n| date | string | payment date and time (yyyy-MM-dd HH:mm:ss) |\n| newStatus | string | payment PAID status |\n\n### REVERSAL NOTIFICATION\n\nHere is an example of a notification sent by PayMee (the lines have been broken for ease of reading):\n\n```\nPOST /callback?reversing=true&type=reversing HTTP/1.1\nAuthorization: Basic YWYzOGI3NTEtMzBkNy00MjYxLWE5ZmItZWEzMGY2ZWNlNjA5OjI4MzMxZjQzLWUyYjMtNDA3OC05NTAyLTVmNjU2ZmI2NmNkZg==\nContent-Length:272\nContent-Type:application/json\n{\n   \"id\": 611212,\n   \"uuid\": \"d19b39ce-bffd-3f6d-80c4-c376a242afd3\",\n   \"currency\": \"BRL\",\n   \"originalAmount\":100.00,\n   \"reversedAmount\":100.00,\n   \"status\": \"PENDING\",\n   \"bankDetails\":{\n    \"bank\": \"341 - BANCO ITAÚ-UNIBANCO S.A.\",\n    \"branch\":\"0000\",\n    \"account\":\"00000-0\"\n   },\n   \"sale\": {\n       \"id\": 611210,\n       \"uuid\": \"75e0b5e2-bc3f-4e75-9c52-24096f2e004d\"\n   }\n   \"creation\": \"2018-04-15 08:33:22\",\n   \"receipt\": null,\n   \"reason\": \"amount greater than total of sale\"\n}\n\n ```\n\nA Reversal Status URL must be registered (just like the payment notification) and you **must enable** this feature on your [merchant panel](https://www2.paymee.com.br/merchants/API), so the notification POST is executed.\n\nThis notification occurs two moments:\n\n- when we cannot approve or identify the sale - In this case, we send the status attribute as **PENDING**;\n- when we revert the amount successfully to the customer - In this case, we send the status attribute as **PAID**\n    \n\nThe callback URL should return the HTTP status 200. Otherwise PayMee will try again in 60-seconds interval for a maximum of 5 (five) attempts.\n\n## Response\n\n| **PROPERTY** | **TYPE** | **DESCRIPTION** |\n| --- | --- | --- |\n| id | number | transaction id |\n| uuid | string | transaction uuid |\n| currency | string | order currency |\n| originalAmount | number | original order amount |\n| reversedAmount | number | reversed amount |\n| bankDetails.bank | string | credit bank |\n| bankDetails.branch | string | credit branch |\n| bankDetails.account | string | credit account |\n| receipt | string | reversal receipt (under development) |\n| status | string | reversal status (PENDING/PAID/CANCELLED) |\n| reason | string | reversal reason |\n| date | string | reversal date (yyyy-MM-dd HH:mm:ss) |\n\n### REFUND NOTIFICATION\n\nHere is an example of a notification sent by PayMee (the lines have been broken for easy reading):\n\n```\nPOST /callback?refund=true&type=refund HTTP/1.1\nAuthorization: Basic YWYzOGI3NTEtMzBkNy00MjYxLWE5ZmItZWEzMGY2ZWNlNjA5OjI4MzMxZjQzLWUyYjMtNDA3OC05NTAyLTVmNjU2ZmI2NmNkZg==\nContent-Length:272\nContent-Type:application/json\n{\n   \"saleToken\": \"d19b39ce-bffd-3f6d-80c4-c376a242afd3\",\n   \"referenceCode\":\"0000000000014\",\n   \"currency\": \"BRL\",\n   \"originalAmount\":150.00,\n   \"reversedAmount\":50.00,\n   \"bankDetails\":{\n    \"bank\": \"341 - BANCO ITAÚ-UNIBANCO S.A.\",\n    \"branch\":\"0000\",\n    \"account\":\"00000-0\"\n   },\n   \"receipt\": \"null\",\n   \"status\": \"PAID\",\n   \"refund\": {\n       \"id\": 611211,\n       \"uuid\": fbebcd28-ae51-11e9-a2a3-2a2ae2dbcce4,\n       \"status\": \"PAID\",\n       \"amount\": 50.00,\n       \"creation\": \"2018-04-15 08:33:22\",\n       \"creditDate\": \"2018-04-16 10:48:56\"\n   }\n   \"reason\": \"amount greater than total of sale\",\n   \"date\":\"2018-04-16 10:48:56\"\n}\n\n ```\n\nA Refund Status URL must be registered (The same as the payment notification) and you **must enable** this feature on your **merchant panel**, so the notification POST is executed.\n\nThis notification occurs when:\n\n- Refund the amount successfully - In this case, we send the status attribute as **PAID**\n    \n\nThe callback URL should return the HTTP status 200. Otherwise PayMee will try again in 60-seconds interval for a maximum of 5 (five) attempts.\n\n## Response\n\n| **PROPERTY** | **TYPE** | **DESCRIPTION** |\n| --- | --- | --- |\n| saleToken | string | transaction UUID |\n| referenceCode | string | order identification |\n| currency | string | order currency |\n| originalAmount | number | original order amount |\n| amountRefunded | number | refund amount |\n| bankDetails.bank | string | credit bank |\n| bankDetails.branch | string | credit branch |\n| bankDetails.account | string | credit account |\n| receipt | string | refund receipt (under development) |\n| status | string | refund status (PENDING/PAID/CANCELLED) |\n| reason | string | refund reason |\n| date | string | refund date (yyyy-MM-dd HH:mm:ss) |\n\n### PAYOUT NOTIFICATION\n\nHere is a success example of a notification sent by PayMee (the lines have been broken for ease of reading):\n\n```\nPOST /callback?type=payout HTTP/1.1\nAuthorization: Basic YWYzOGI3NTEtMzBkNy00MjYxLWE5ZmItZWEzMGY2ZWNlNjA5OjI4MzMxZjQzLWUyYjMtNDA3OC05NTAyLTVmNjU2ZmI2NmNkZg==\nContent-Length:272\nContent-Type:application/json\n{\n   \"success\": true,\n   \"message\": \"success\"\n   \"id\": 611212,\n   \"uuid\": \"d19b39ce-bffd-3f6d-80c4-c376a242afd3\",\n   \"currency\": \"BRL\",\n   \"amount\":100.00,\n   \"status\": \"PAID\",\n   \"referenceCode\": \"XPADOA\",\n   \"bankDetails\":{\n    \"bank\": \"341 - BANCO ITAÚ-UNIBANCO S.A.\",\n    \"branch\":\"0000\",\n    \"account\":\"00000-0\"\n   },\n   \"creation\": \"2018-04-15 08:33:22\",\n   \"receipt\": \"https://receipts.paymee.com.br/transaction/23e49aa1f7f193395a7f30900f8aeb40a65a9d7dd85e8d05456847b800713546/d19b39ce-bffd-3f6d-80c4-c376a242afd3\",\n}\n\n ```\n\nHere is a error example of a notification sent by PayMee (the lines have been broken for ease of reading):\n\n```\nPOST /callback?payout=true HTTP/1.1\nAuthorization: Basic YWYzOGI3NTEtMzBkNy00MjYxLWE5ZmItZWEzMGY2ZWNlNjA5OjI4MzMxZjQzLWUyYjMtNDA3OC05NTAyLTVmNjU2ZmI2NmNkZg==\nContent-Length:272\nContent-Type:application/json\n{\n   \"success\": false,\n   \"message\": \"Os dados informados não são validos\",\n   \"error_code\": \"PE0001\"\n   \"id\": 611212,\n   \"uuid\": \"d19b39ce-bffd-3f6d-80c4-c376a242afd3\",\n   \"currency\": \"BRL\",\n   \"amount\":100.00,\n   \"status\": \"PENDING\",\n   \"referenceCode\": \"XPADOA\",\n   \"bankDetails\":{\n    \"bank\": \"341 - BANCO ITAÚ-UNIBANCO S.A.\",\n    \"branch\":\"0000\",\n    \"account\":\"00000-0\"\n   },\n   \"creation\": \"2018-04-15 08:33:22\",\n   \"receipt\": \"https://receipts.paymee.com.br/transaction/23e49aa1f7f193395a7f30900f8aeb40a65a9d7dd85e8d05456847b800713546/d19b39ce-bffd-3f6d-80c4-c376a242afd3\",\n}\n\n ```\n\nA webhook URL must be registered (just like the payment notification) and you **must enable** this feature on your [merchant panel](https://www2.paymee.com.br/merchants/API), so the notification POST is executed.\n\n## Response\n\n| **PROPERTY** | **TYPE** | **DESCRIPTION** |\n| --- | --- | --- |\n| success | boolean | payments status flag |\n| message | string | return message |\n| error_code | string | response error code |\n| id | number | PayMee's transaction id |\n| uuid | string | PayMee's transaction uuid |\n| currency | string | transaction currency |\n| amount | number | transaction amount |\n| status | string | refund status (PENDING/PAID/CANCELLED) |\n| bankDetails.bank | string | credit bank |\n| bankDetails.branch | string | credit branch |\n| bankDetails.account | string | credit account |\n| receipt | string | payment receipt |\n| date | string | transaction date (yyyy-MM-dd HH:mm:ss) |\n| receiptDate | string | receipt date (yyyy-MM-dd HH:mm:ss) |\n\n## Error codes\n\n| **PROPERTY** | **DESCRIPTION** |\n| --- | --- |\n| PE0001 | Os dados bancarios fornecidos não validos |\n| PE0002 | A titularidade da conta não pertence ao documento informado |\n| PE0003 | A conta nao aceita movimentacoes - (MOTIVOS) |\n| PE0004 | OUTROS - (MOTIVOS) |\n\n# Resources",
+    "description": "# Overview\n\nThe purpose of this documentation is to guide the developer on how to integrate with PayMee, describing the features and methods to be used, listing information to be sent and received as well as providing examples.\n\nThe integration mechanism with PayMee is simple, so only intermediate knowledge in Web programming language, HTTP/HTTPS requests and JSON file manipulation are required to successfully deploy the PayMee solution.\n\nIn this manual you will find reference to all operations available on the API REST of the PayMee API. These operations must be performed using specific keys (**x-api-key** and **x-api-token**) on the respective environment endpoints:\n\nProduction Environment\n\n[<b>https://api.paymee.com.br/</b>](https://api.paymee.com.br/)\n\nSandbox Environment\n\n[<b>https://apisandbox.paymee.com.br/</b>](https://apisandbox.paymee.com.br/)\n\nTo perform an operation, combine the base URL of the environment with the resource (URI) of the desired operation and send it using the HTTP verb as described in the operation.\n\n# Solution features\n\nThe API solution of the PayMee platform was developed with REST technology, which is the market standard and also independent from the technology used by other parties. This way, it is possible to integrate it through the great majority of programming languages, such as: ASP, ASP. Net, Java, PHP, Ruby, Python, etc.\n\nAmongst other features, the attributes that stand out the most in the PayMee platform are:\n\n**No proprietary apps**: it is not necessary to install any applications in the virtual shop environment, under no circumstances.\n\n**Simplicity**: the protocol used is purely HTTPS.\n\n**Ease of testing**: the PayMee platform offers a publicly accessible Sandbox environment, which allows the developer to create a [test account](https://sandbox.paymee.com.br/register) making it easier and faster to start integration.\n\n**Credentials**: handling of the customer’s credentials (**x-api-key** and **x-api-token**) traffics in the header of the HTTP request of the message.\n\n**Safety**: the information exchange always takes place between the store's Server and PayMee's Server, that is, without the buyer’s browser in between.\n\n**Multiplatform**: the integration is performed through the REST Web Service.\n\n# Architecture\n\nIntegration is performed through Web Services. The model employed is quite simple: There are two URLs (endpoints) available: a specific one for production (real time operation), and a specific one for testing, called sandbox.\n\nThese URLs receive the HTTP messages through the **POST**, **GET** or **PUT** methods. Each message type must be sent to a resource identified through the path.\n\n| **METHOD** | **DESCRIPTION** |\n| --- | --- |\n| POST | The **POST** HTTP method is used in the creation of resources or sending information that will be processed. For example, creation of a transaction. |\n| PUT | The **PUT** HTTP method is used to update an already existing resource. For example, refunding or cancelation of a previous transaction. |\n| GET | The **GET** HTTP method is used for querying already existing resources. For example, transaction query. |\n\n## Supported Payment Methods\n\nBank transfers remain available through September 16, 2026 and are discontinued starting September 17, 2026. PIX, cash deposit, credit card and Open Banking remain available according to merchant configuration.\n\n| BANK OR METHOD | WIRE TRANSFER THROUGH SEPTEMBER 16, 2026 | CASH | CREDIT CARD | PIX |\n| --- | --- | --- | --- | --- |\n| 001 - BANCO DO BRASIL | YES | YES | NO | NO |\n| 237 - BANCO BRADESCO | YES | NO | NO | NO |\n| 104 - BANCO CAIXA ECONOMICA FEDERAL | YES | NO | NO | NO |\n| 341 - BANCO ITAÚ-UNIBANCO | YES | YES | NO | NO |\n| 033 - BANCO SANTANDER BRASIL | YES | YES | NO | NO |\n| 212 - BANCO ORIGINAL | YES | NO | NO | NO |\n| 077 - BANCO INTER | YES | NO | NO | NO |\n| 218 - BANCO BS2 | YES | NO | NO | NO |\n| PIX | NO | NO | NO | YES |\n| CREDIT CARD | NO | NO | YES | NO |\n\n# Sandbox and Tools\n\n## About Sandbox\n\nTo facilitate testing during integration, PayMee offers a Sandbox environment, which is composed by two areas:\n\n- Test account register\n- Transactional Endpoint\n    - Request: [https://apisandbox.paymee.com.br](https://apisandbox.paymee.com.br)\n\nAdvantages of using the Sandbox  \nNo affiliation is required to use PayMee's Sandbox. You just have to access the Sandbox Registration, create an account and, with it, receive a **x-api-key** and a **x-api-token**, which are the credentials required for the API methods.\n\nYou can create your sandbox account here: [<b>https://sandbox.paymee.com.br/register</b>](https://sandbox.paymee.com.br/register)\n\n# Webhook\n\n## Notification Post\n\nThe Notification Post is sent based on a selection of events to be made in the PayMee registry.\n\nThe events that can be notified are:\n\n| EVENT TYPE | EVENT |\n| --- | --- |\n| SALE | PAID |\n| REVERSAL | CREATE/PAID |\n\nPayMee's send the notifications to the URL that you have configured using the HTTP protocol, by the POST method.\n\n**Authentication**\n\nBasic http auth.  \nThe username is your **x-api-key** and password is your **x-api-token**\n\n**Base64 Basic Auth reference:**\n\n**x-api-key** = af38b751-30d7-4261-a9fb-ea30f6ece609\n\n**x-api-token** = 28331f43-e2b3-4078-9502-5f656fb66cdf\n\n### TRANSFER/WALK-IN NOTIFICATION (PAYMENT CONFIRMATION)\n\nHere is an example of a notification sent by PayMee (the lines have been broken for ease of reading):\n\n```\nPOST /callback HTTP/1.1\nAuthorization: Basic YWYzOGI3NTEtMzBkNy00MjYxLWE5ZmItZWEzMGY2ZWNlNjA5OjI4MzMxZjQzLWUyYjMtNDA3OC05NTAyLTVmNjU2ZmI2NmNkZg==\nContent-Length:272\nContent-Type:application/json\n{\n  \"saleToken\": \"d59b39ce-bffd-3f6d-80c4-c376a242afd1\",\n  \"referenceCode\":\"0000000000014\",\n   \"currency\": \"BRL\",\n   \"amount\":100.00,\n   \"shopper\":{\n    \"id\": \"12911\",\n    \"firstName\":\"Teste\",\n    \"lastName\":\"Silva\",\n    \"email\":\"teste@teste.com.br\",\n    \"agency\": \"1234\",\n    \"account\": \"123456-0\"\n   },\n  \"date\":\"2017-07-28 10:48:56\",\n  \"newStatus\": \"PAID\"\n}\n\n ```\n\nA Payment Status URL must be registered, so that the notification POST is executed.\n\nThe callback URL should return the HTTP status 200. Otherwise PayMee will try again in 60-seconds interval for a maximum of 5 (five) attempts.\n\n## Response\n\n| **PROPERTY** | **TYPE** | **DESCRIPTION** |\n| --- | --- | --- |\n| saleToken | string | transaction UUID |\n| referenceCode | string | order identification |\n| amount | number | order amount |\n| shopper.firstName | string | shopper's first name |\n| shopper.firstName | string | shopper's last name |\n| shopper.email | string | shopper's email |\n| shopper.agency | string | shopper's agency |\n| shopper.account | string | shopper's account |\n| date | string | payment date and time (yyyy-MM-dd HH:mm:ss) |\n| newStatus | string | payment PAID status |\n\n### REVERSAL NOTIFICATION\n\nHere is an example of a notification sent by PayMee (the lines have been broken for ease of reading):\n\n```\nPOST /callback?reversing=true&type=reversing HTTP/1.1\nAuthorization: Basic YWYzOGI3NTEtMzBkNy00MjYxLWE5ZmItZWEzMGY2ZWNlNjA5OjI4MzMxZjQzLWUyYjMtNDA3OC05NTAyLTVmNjU2ZmI2NmNkZg==\nContent-Length:272\nContent-Type:application/json\n{\n   \"id\": 611212,\n   \"uuid\": \"d19b39ce-bffd-3f6d-80c4-c376a242afd3\",\n   \"currency\": \"BRL\",\n   \"originalAmount\":100.00,\n   \"reversedAmount\":100.00,\n   \"status\": \"PENDING\",\n   \"bankDetails\":{\n    \"bank\": \"341 - BANCO ITAÚ-UNIBANCO S.A.\",\n    \"branch\":\"0000\",\n    \"account\":\"00000-0\"\n   },\n   \"sale\": {\n       \"id\": 611210,\n       \"uuid\": \"75e0b5e2-bc3f-4e75-9c52-24096f2e004d\"\n   }\n   \"creation\": \"2018-04-15 08:33:22\",\n   \"receipt\": null,\n   \"reason\": \"amount greater than total of sale\"\n}\n\n ```\n\nA Reversal Status URL must be registered (just like the payment notification) and you **must enable** this feature on your [merchant panel](https://www2.paymee.com.br/merchants/API), so the notification POST is executed.\n\nThis notification occurs two moments:\n\n- when we cannot approve or identify the sale - In this case, we send the status attribute as **PENDING**;\n- when we revert the amount successfully to the customer - In this case, we send the status attribute as **PAID**\n    \n\nThe callback URL should return the HTTP status 200. Otherwise PayMee will try again in 60-seconds interval for a maximum of 5 (five) attempts.\n\n## Response\n\n| **PROPERTY** | **TYPE** | **DESCRIPTION** |\n| --- | --- | --- |\n| id | number | transaction id |\n| uuid | string | transaction uuid |\n| currency | string | order currency |\n| originalAmount | number | original order amount |\n| reversedAmount | number | reversed amount |\n| bankDetails.bank | string | credit bank |\n| bankDetails.branch | string | credit branch |\n| bankDetails.account | string | credit account |\n| receipt | string | reversal receipt (under development) |\n| status | string | reversal status (PENDING/PAID/CANCELLED) |\n| reason | string | reversal reason |\n| date | string | reversal date (yyyy-MM-dd HH:mm:ss) |\n\n### REFUND NOTIFICATION\n\nHere is an example of a notification sent by PayMee (the lines have been broken for easy reading):\n\n```\nPOST /callback?refund=true&type=refund HTTP/1.1\nAuthorization: Basic YWYzOGI3NTEtMzBkNy00MjYxLWE5ZmItZWEzMGY2ZWNlNjA5OjI4MzMxZjQzLWUyYjMtNDA3OC05NTAyLTVmNjU2ZmI2NmNkZg==\nContent-Length:272\nContent-Type:application/json\n{\n   \"saleToken\": \"d19b39ce-bffd-3f6d-80c4-c376a242afd3\",\n   \"referenceCode\":\"0000000000014\",\n   \"currency\": \"BRL\",\n   \"originalAmount\":150.00,\n   \"reversedAmount\":50.00,\n   \"bankDetails\":{\n    \"bank\": \"341 - BANCO ITAÚ-UNIBANCO S.A.\",\n    \"branch\":\"0000\",\n    \"account\":\"00000-0\"\n   },\n   \"receipt\": \"null\",\n   \"status\": \"PAID\",\n   \"refund\": {\n       \"id\": 611211,\n       \"uuid\": fbebcd28-ae51-11e9-a2a3-2a2ae2dbcce4,\n       \"status\": \"PAID\",\n       \"amount\": 50.00,\n       \"creation\": \"2018-04-15 08:33:22\",\n       \"creditDate\": \"2018-04-16 10:48:56\"\n   }\n   \"reason\": \"amount greater than total of sale\",\n   \"date\":\"2018-04-16 10:48:56\"\n}\n\n ```\n\nA Refund Status URL must be registered (The same as the payment notification) and you **must enable** this feature on your **merchant panel**, so the notification POST is executed.\n\nThis notification occurs when:\n\n- Refund the amount successfully - In this case, we send the status attribute as **PAID**\n    \n\nThe callback URL should return the HTTP status 200. Otherwise PayMee will try again in 60-seconds interval for a maximum of 5 (five) attempts.\n\n## Response\n\n| **PROPERTY** | **TYPE** | **DESCRIPTION** |\n| --- | --- | --- |\n| saleToken | string | transaction UUID |\n| referenceCode | string | order identification |\n| currency | string | order currency |\n| originalAmount | number | original order amount |\n| amountRefunded | number | refund amount |\n| bankDetails.bank | string | credit bank |\n| bankDetails.branch | string | credit branch |\n| bankDetails.account | string | credit account |\n| receipt | string | refund receipt (under development) |\n| status | string | refund status (PENDING/PAID/CANCELLED) |\n| reason | string | refund reason |\n| date | string | refund date (yyyy-MM-dd HH:mm:ss) |\n\n### PAYOUT NOTIFICATION\n\nHere is a success example of a notification sent by PayMee (the lines have been broken for ease of reading):\n\n```\nPOST /callback?type=payout HTTP/1.1\nAuthorization: Basic YWYzOGI3NTEtMzBkNy00MjYxLWE5ZmItZWEzMGY2ZWNlNjA5OjI4MzMxZjQzLWUyYjMtNDA3OC05NTAyLTVmNjU2ZmI2NmNkZg==\nContent-Length:272\nContent-Type:application/json\n{\n   \"success\": true,\n   \"message\": \"success\"\n   \"id\": 611212,\n   \"uuid\": \"d19b39ce-bffd-3f6d-80c4-c376a242afd3\",\n   \"currency\": \"BRL\",\n   \"amount\":100.00,\n   \"status\": \"PAID\",\n   \"referenceCode\": \"XPADOA\",\n   \"bankDetails\":{\n    \"bank\": \"341 - BANCO ITAÚ-UNIBANCO S.A.\",\n    \"branch\":\"0000\",\n    \"account\":\"00000-0\"\n   },\n   \"creation\": \"2018-04-15 08:33:22\",\n   \"receipt\": \"https://receipts.paymee.com.br/transaction/23e49aa1f7f193395a7f30900f8aeb40a65a9d7dd85e8d05456847b800713546/d19b39ce-bffd-3f6d-80c4-c376a242afd3\",\n}\n\n ```\n\nHere is a error example of a notification sent by PayMee (the lines have been broken for ease of reading):\n\n```\nPOST /callback?payout=true HTTP/1.1\nAuthorization: Basic YWYzOGI3NTEtMzBkNy00MjYxLWE5ZmItZWEzMGY2ZWNlNjA5OjI4MzMxZjQzLWUyYjMtNDA3OC05NTAyLTVmNjU2ZmI2NmNkZg==\nContent-Length:272\nContent-Type:application/json\n{\n   \"success\": false,\n   \"message\": \"Os dados informados não são validos\",\n   \"error_code\": \"PE0001\"\n   \"id\": 611212,\n   \"uuid\": \"d19b39ce-bffd-3f6d-80c4-c376a242afd3\",\n   \"currency\": \"BRL\",\n   \"amount\":100.00,\n   \"status\": \"PENDING\",\n   \"referenceCode\": \"XPADOA\",\n   \"bankDetails\":{\n    \"bank\": \"341 - BANCO ITAÚ-UNIBANCO S.A.\",\n    \"branch\":\"0000\",\n    \"account\":\"00000-0\"\n   },\n   \"creation\": \"2018-04-15 08:33:22\",\n   \"receipt\": \"https://receipts.paymee.com.br/transaction/23e49aa1f7f193395a7f30900f8aeb40a65a9d7dd85e8d05456847b800713546/d19b39ce-bffd-3f6d-80c4-c376a242afd3\",\n}\n\n ```\n\nA webhook URL must be registered (just like the payment notification) and you **must enable** this feature on your [merchant panel](https://www2.paymee.com.br/merchants/API), so the notification POST is executed.\n\n## Response\n\n| **PROPERTY** | **TYPE** | **DESCRIPTION** |\n| --- | --- | --- |\n| success | boolean | payments status flag |\n| message | string | return message |\n| error_code | string | response error code |\n| id | number | PayMee's transaction id |\n| uuid | string | PayMee's transaction uuid |\n| currency | string | transaction currency |\n| amount | number | transaction amount |\n| status | string | refund status (PENDING/PAID/CANCELLED) |\n| bankDetails.bank | string | credit bank |\n| bankDetails.branch | string | credit branch |\n| bankDetails.account | string | credit account |\n| receipt | string | payment receipt |\n| date | string | transaction date (yyyy-MM-dd HH:mm:ss) |\n| receiptDate | string | receipt date (yyyy-MM-dd HH:mm:ss) |\n\n## Error codes\n\n| **PROPERTY** | **DESCRIPTION** |\n| --- | --- |\n| PE0001 | Os dados bancarios fornecidos não validos |\n| PE0002 | A titularidade da conta não pertence ao documento informado |\n| PE0003 | A conta nao aceita movimentacoes - (MOTIVOS) |\n| PE0004 | OUTROS - (MOTIVOS) |\n\n# Resources",
     "version": "1.0.0",
     "contact": {}
   },
@@ -1054,8 +1054,8 @@
         "tags": [
           "Checkouts"
         ],
-        "summary": "Semi-transparent wire-transfer, pix and credit card and openbanking checkout",
-        "description": "To generate a transaction throught PayMee, it is necessary to send a request using the POST method to the **checkout** resource, as shown. This example covers the minimum of fields required to be submitted for authorization.",
+        "summary": "Semi-transparent pix, cash, credit card and openbanking checkout",
+        "description": "Creates a semi-transparent checkout. Starting September 17, 2026, bank transfer payment methods are discontinued and return HTTP 400 with the message 'Transferência bancária foi descontinuada e não está mais disponível.'.",
         "operationId": "semiTransparentWireTransferPixAndCreditCardAndOpenbankingCheckout",
         "parameters": [
           {
@@ -1150,20 +1150,9 @@
                     "description": "Chosen payment method",
                     "example": "PIX",
                     "enum": [
-                      "BB_TRANSFER",
                       "BB_DI",
-                      "BRADESCO_TRANSFER",
-                      "ITAU_TRANSFER_GENERIC",
-                      "ITAU_TRANSFER_PF",
-                      "ITAU_TRANSFER_PJ",
                       "ITAU_DI",
-                      "CEF_TRANSFER",
-                      "ORIGINAL_TRANSFER",
-                      "SANTANDER_TRANSFER",
                       "SANTANDER_DI",
-                      "INTER_TRANSFER",
-                      "BS2_TRANSFER",
-                      "OUTROS_BANCOS",
                       "PIX",
                       "CREDIT_CARD",
                       "INITIATOR"
@@ -1370,7 +1359,7 @@
                             },
                             "chosen": {
                               "type": "string",
-                              "example": "SANTANDER_TRANSFER"
+                              "example": "PIX"
                             },
                             "identification": {
                               "type": "string",
@@ -1391,11 +1380,11 @@
                             },
                             "label": {
                               "type": "string",
-                              "example": "transferência entre contas Santander Brasil"
+                              "example": "Transferência via PIX"
                             },
                             "name": {
                               "type": "string",
-                              "example": "Santander Brasil"
+                              "example": "PIX"
                             },
                             "need_identification": {
                               "type": "boolean",
@@ -1619,116 +1608,6 @@
                         }
                       }
                     }
-                  },
-                  "Success response - other payments methods": {
-                    "value": {
-                      "status": 0,
-                      "message": "success",
-                      "response": {
-                        "amount": 11,
-                        "id": 27736,
-                        "uuid": "56087f1f-9944-3d52-ac3d-50f23ad74ec2",
-                        "referenceCode": "refcode12345",
-                        "saleCode": "00027736",
-                        "shopper": {
-                          "bankDetails": {
-                            "account": "00011-0",
-                            "branch": "0001"
-                          },
-                          "document": {
-                            "number": "00000000000",
-                            "type": "CPF"
-                          },
-                          "email": "foo@bar.com",
-                          "id": "24391203",
-                          "name": "JOHN DOE",
-                          "phone": {
-                            "number": "11999990000",
-                            "type": "MOBILE"
-                          }
-                        },
-                        "instructions": {
-                          "beneficiary_account": "13000000-1",
-                          "beneficiary_branch": "0001",
-                          "beneficiary_document": "28.683.892/0001-91",
-                          "beneficiary_name": "PayMee Brasil Serviços de Pagamentos S.A",
-                          "beneficiary_op": "",
-                          "chosen": "OUTROS_BANCOS",
-                          "identification": "50027",
-                          "label": "TED para Santander Brasil S.A",
-                          "name": "TED para Santander",
-                          "need_identification": false,
-                          "redirect_urls": {
-                            "android": "https://portal.febraban.org.br/pagina/3164/12/pt-br/associados",
-                            "desktop": "https://www.febraban.org.br/associados/utilitarios/bancos.asp",
-                            "ios": "https://www.febraban.org.br/associados/utilitarios/bancos.asp",
-                            "windows_phone": null
-                          },
-                          "steps": [
-                            "Acesse o site ou APP do seu banco",
-                            "No menu de serviços, selecione 'Transferências > TED'",
-                            "Informe a agência: 0001 e conta-corrente: 13000000-1",
-                            "Informe o nosso documento: 28.683.892/0001-91",
-                            "Informe o nosso nome (caso necessário): PayMee Brasil",
-                            "Efetue o pagamento no valor exato de R$ 11,00.",
-                            "PRONTO! O pagamento do seu pedido será confirmado ao comércio XXXXX"
-                          ]
-                        }
-                      }
-                    }
-                  },
-                  "Success response - GENERIC": {
-                    "value": {
-                      "status": 0,
-                      "message": "success",
-                      "response": {
-                        "amount": 11,
-                        "id": 2423,
-                        "uuid": "81d588cb-4fec-3088-960d-6881b8749247",
-                        "referenceCode": "refcode12345",
-                        "shopper": {
-                          "bankDetails": {
-                            "account": "00011-0",
-                            "branch": "0001"
-                          },
-                          "document": {
-                            "number": "00000000000",
-                            "type": "CPF"
-                          },
-                          "email": "foo@bar.com",
-                          "id": "24391203",
-                          "name": "JOHN DOE",
-                          "phone": {
-                            "number": "11999990000",
-                            "type": "MOBILE"
-                          }
-                        },
-                        "instructions": {
-                          "beneficiary_account": "13002973-8",
-                          "beneficiary_branch": "0386",
-                          "beneficiary_name": "PayMee Brasil Serviços de Pagamentos S.A",
-                          "chosen": "SANTANDER_TRANSFER",
-                          "identification": "2423",
-                          "label": "transferência entre contas Santander Brasil",
-                          "name": "Santander Brasil",
-                          "need_identification": false,
-                          "redirect_urls": {
-                            "android": "https://play.google.com/store/apps/details?id=com.santander.app&hl=pt_BR",
-                            "desktop": "https://www.santander.com.br/",
-                            "ios": "https://itunes.apple.com/br/app/santander-brasil/id613365711?mt=8",
-                            "windows_phone": "https://www.microsoft.com/pt-br/store/p/minha-conta-pf/9wzdncrdc5g4"
-                          },
-                          "steps": [
-                            "ATENÇÃO: Não aceitamos pagamentos de contas de terceiros, pague o valor exato!",
-                            "Acesse o APP ou o site do Banco Santander",
-                            "No menu de serviços, selecione 'Transferência entre Contas Santander'",
-                            "Informe a agência: 0386 e conta-corrente: 13002973-8",
-                            "Confirme o nome do favorecido:  PayMee Brasil Serviços de Pagamentos S.A.",
-                            "Efetue o pagamento no valor exato de R$ 11,00."
-                          ]
-                        }
-                      }
-                    }
                   }
 
                 }
@@ -1736,7 +1615,7 @@
             }
           },
           "400": {
-            "description": "duplicated referenceCode response / validation failure response",
+            "description": "Duplicated reference code, validation failure, or discontinued bank transfer response",
             "headers": {
               "Connection": {
                 "schema": {
@@ -1787,6 +1666,10 @@
                           "message": "referenceCode duplicated para o comércio."
                         }
                       ]
+                    },
+                    "main_error_message": {
+                      "type": "string",
+                      "example": "Transferência bancária foi descontinuada e não está mais disponível."
                     },
                     "message": {
                       "type": "string",
@@ -1865,6 +1748,20 @@
                           "message": "referenceCode duplicated para o comércio."
                         }
                       ],
+                      "message": "field validation failure",
+                      "status": -1
+                    }
+                  },
+                  "Bank transfer discontinued response": {
+                    "value": {
+                      "errorCount": 1,
+                      "errors": [
+                        {
+                          "field": "paymentMethod",
+                          "message": "Transferência bancária foi descontinuada e não está mais disponível."
+                        }
+                      ],
+                      "main_error_message": "Transferência bancária foi descontinuada e não está mais disponível.",
                       "message": "field validation failure",
                       "status": -1
                     }
@@ -1960,7 +1857,7 @@
           "Checkouts"
         ],
         "summary": "Redirect checkout",
-        "description": "To generate a transaction through PayMee, it is necessary to send a request using the POST method to the checkout resource, as shown. This example covers the minimum of submitted fields required for authorization.",
+        "description": "Creates a redirect checkout. Starting September 17, 2026, bank transfer payment methods are discontinued and return HTTP 400 with the message 'Transferência bancária foi descontinuada e não está mais disponível.'. Omitting paymentMethod keeps the hosted checkout available with supported methods.",
         "operationId": "redirectCheckout",
         "parameters": [
           {
@@ -1994,7 +1891,7 @@
                     "callbackURL": "https://foo.bar/paymeeListener",
                     "currency": "BRL",
                     "maxAge": 120,
-                    "paymentMethod": "ITAU_TRANSFER_PFF",
+                    "paymentMethod": "PIX",
                     "referenceCode": "refcode12345",
                     "shopper": {
                       "bankDetails": {
@@ -2050,8 +1947,8 @@
                   },
                   "paymentMethod": {
                     "type": "string",
-                    "description": "Chosen payment method",
-                    "example": "ITAU_TRANSFER_PFF"
+                    "description": "Chosen supported payment method. Bank transfer values are discontinued.",
+                    "example": "PIX"
                   },
                   "callbackURL": {
                     "type": "string",
@@ -2301,7 +2198,7 @@
             }
           },
           "400": {
-            "description": "Duplicated reference code response / Field validation failure response",
+            "description": "Duplicated reference code, field validation failure, or discontinued bank transfer response",
             "headers": {
               "Connection": {
                 "schema": {
@@ -2346,6 +2243,10 @@
                           }
                         }
                       }
+                    },
+                    "main_error_message": {
+                      "type": "string",
+                      "example": "Transferência bancária foi descontinuada e não está mais disponível."
                     },
                     "message": {
                       "type": "string",
@@ -2420,6 +2321,20 @@
                           "message": "referenceCode duplicated para o comércio."
                         }
                       ],
+                      "message": "field validation failure",
+                      "status": -1
+                    }
+                  },
+                  "Bank transfer discontinued response": {
+                    "value": {
+                      "errorCount": 1,
+                      "errors": [
+                        {
+                          "field": "paymentMethod",
+                          "message": "Transferência bancária foi descontinuada e não está mais disponível."
+                        }
+                      ],
+                      "main_error_message": "Transferência bancária foi descontinuada e não está mais disponível.",
                       "message": "field validation failure",
                       "status": -1
                     }
@@ -4276,7 +4191,7 @@
     "/v1.1/available_payment_methods": {
       "get": {
         "summary": "Get available payment methods",
-        "description": "Returns the list of payment methods currently enabled for the merchant.",
+        "description": "Returns payment methods currently enabled for the merchant. Starting September 17, 2026, bank transfer methods are omitted.",
         "operationId": "getAvailablePaymentMethods",
         "parameters": [
           {
@@ -4312,12 +4227,9 @@
                       "items": {
                         "type": "object",
                         "properties": {
-                          "type":                { "type": "string",  "description": "Payment method type",                  "example": "pix",           "enum": ["pix","wire_transfer","cash_deposit"] },
+                          "type":                { "type": "string",  "description": "Payment method type",                  "example": "pix",           "enum": ["pix","cash_deposit"] },
                           "value":               { "type": "string",  "description": "Internal payment method value",       "example": "PIX" },
-                          "label":               { "type": "string",  "description": "Human‑readable label",                "example": "Pagamento via PIX" },
-                          "bank_code":           { "type": "string",  "description": "COMPE code (wire transfer only)",      "nullable": true },
-                          "payment_method_name": { "type": "string",  "description": "Display name",                         "nullable": true },
-                          "approval_deadline":   { "type": "integer", "description": "Deadline (seconds) for manual approval","nullable": true }
+                          "label":               { "type": "string",  "description": "Human‑readable label",                "example": "Pagamento via PIX" }
                         }
                       }
                     }
@@ -4330,11 +4242,6 @@
                       "message": "success",
                       "payment_methods": [
                         { "label": "Pagamento via PIX", "type": "pix", "value": "PIX" },
-                        { "label": "Pagamento por transferência via Banco do Brasil", "type": "wire_transfer", "value": "BB_TRANSFER" },
-                        { "label": "Pagamento por transferência via Bradesco",       "type": "wire_transfer", "value": "BRADESCO_TRANSFER" },
-                        { "label": "Pagamento por transferência via Caixa",          "type": "wire_transfer", "value": "CEF_TRANSFER" },
-                        { "label": "Pagamento por transferência via Santander Brasil","type": "wire_transfer", "value": "SANTANDER_TRANSFER" },
-                        { "label": "Pagamento por transferência via Banco BS2",      "type": "wire_transfer", "value": "BS2_TRANSFER" },
                         { "label": "Pagamento por depósito bancário via Banco do Brasil", "type": "cash_deposit", "value": "BB_DI" },
                         { "label": "Pagamento por depósito bancário via Santander Brasil", "type": "cash_deposit", "value": "SANTANDER_DI" }
                       ]
