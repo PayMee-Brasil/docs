@@ -1,3 +1,54 @@
 ---
 openapi: post /v1.1/checkout/transparent
 ---
+
+## Boleto and BolePix
+
+Use `BOLETO` for a bank boleto or `BOLETO_PIX` for a boleto with a Pix QR code. BolePix offers two ways to pay the same sale; the customer must pay only once.
+
+These methods require merchant enablement, a configured boleto fee, and a complete merchant address. Check [available payment methods](/api-reference/get-available-payment-methods) before offering them. Split payments and recurrence are not supported for either method.
+
+### Shopper address
+
+`shopper.address` is required **only for `BOLETO` and `BOLETO_PIX`**. PIX, credit card and Open Banking (`INITIATOR`) do not require it.
+
+| Field | Requirement for boleto and BolePix |
+| --- | --- |
+| `street` | Required, nonblank |
+| `number` | Required, nonblank |
+| `neighborhood` | Required, nonblank |
+| `city` | Required, nonblank |
+| `state` | Required, two-letter Brazilian state code |
+| `zipCode` | Required, eight digits; formatting is accepted |
+| `complement` | Optional |
+
+Provide a valid shopper CPF or CNPJ. Shopper bank details are not required for boleto or BolePix. Request examples use illustrative data: replace the document and due date before submitting.
+
+### Due date and expiration
+
+`dueDate` uses `yyyy-MM-dd`, interpreted in `America/Sao_Paulo`. The default configuration uses today plus 3 days when omitted and accepts dates from today through today plus 20 days. PayMee can configure these limits.
+
+For these two methods, sale expiration is calculated from `dueDate` plus the configured grace period (default: 2 days), instead of the request's `maxAge`. The BolePix QR code expires at the end of `dueDate`. Use the bank's returned `paymentLimitDate`, when present, for the boleto payment limit.
+
+### Payment instructions and confirmation
+
+Creation returns boleto fields directly in `response.instructions`: `documentNumber`, `typeableLine`, `barcode`, `dueDate`, `paymentLimitDate`, `amountDue`, `status` and `pdfUrl`. BolePix also returns `response.instructions.pix.qrCode` with the Pix payload and QR code. Use the returned PDF URL as provided.
+
+Successful registration is not payment confirmation. Use the existing [payment webhook](/api-reference/webhook#boleto-and-bolepix) or [transaction query](/api-reference/query-a-transaction) to confirm payment. Transaction queries expose boleto details in the root `boleto` field; its lifecycle status is separate from the sale's `situation`.
+
+### Boleto errors
+
+Errors use the existing validation envelope: `status: -1`, `message: "validation failure"`, `errorCount` and `errors` containing `field`, `code` and `message`.
+
+| HTTP | Code | Meaning |
+| --- | --- | --- |
+| 400 | `boleto.disabled` | Boleto is not enabled for this merchant/configuration |
+| 400 | `merchant.address.incomplete` | Merchant address must be completed |
+| 400 | `shopper.address.isNull` | Shopper address is missing |
+| 400 | `shopper.address.<field>.isNull` | Required address field is missing or blank |
+| 400 | `shopper.address.state.invalid` | State must have two characters |
+| 400 | `shopper.address.zipCode.invalid` | Postal code must contain eight digits |
+| 400 | `boleto.register_failed` | The bank could not register the boleto |
+| 409 | `boleto.duplicate_in_flight` | Issuance is already in progress for this reference code |
+| 503 | `boleto.unavailable` | Boleto issuance is temporarily unavailable |
+| 503 | `boleto_pix.pix_unavailable` | The BolePix QR code could not be generated |

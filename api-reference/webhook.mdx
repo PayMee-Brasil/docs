@@ -110,6 +110,16 @@ Content-Type: application/json
 
 ---
 
+## Boleto and BolePix
+
+`BOLETO` and `BOLETO_PIX` use the existing payment confirmation notification with `newStatus: PAID`, after payment is confirmed and processed. Payload fields, Basic Authentication and acknowledgment requirements remain unchanged. No separate boleto registration event or additional boleto/Pix fields are added to this webhook.
+
+Boleto registration and QR code generation do not confirm payment. Settlement processing is asynchronous. For BolePix, the customer pays once, using either the boleto or Pix. After settlement, cancellation of the alternative payment instrument is requested asynchronously; it is not an immediate guarantee against a second payment.
+
+Use `saleToken` and `referenceCode` to match the sale and process notifications idempotently. Retrieve boleto details through the [transaction query](/api-reference/query-a-transaction), in the root `boleto` field.
+
+---
+
 ## Loan Status Notification
 
 The loan status notification reports credit decision changes for BNPL transactions. It uses a PayMee-owned contract so integrations do not depend on a credit provider's payload.
