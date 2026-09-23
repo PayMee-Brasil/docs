@@ -158,7 +158,7 @@ Recipients are credited asynchronously, after the parent sale is paid. No recipi
 
 ## Webhooks
 
-* **Parent.** When the sale is paid, the payment confirmation for the parent sale is sent to the charge `callbackURL`, or to the webhook URL configured for your account. It includes the parent `split` block, with the same content as the checkout response. Its `settlementStatus` values reflect the moment the notification was built, usually `PENDING`.
+* **Parent.** When the sale is paid, the payment confirmation for the parent sale is sent to the charge `callbackURL`, or to the webhook URL configured for your account. It includes the parent `split` block, with the same content as the checkout response. Its `settlementStatus` values are a snapshot taken when the notification was first built, usually `PENDING`; automatic delivery retries resend that same snapshot. Query the transaction for the current status.
 * **Recipients.** Each recipient account receives a payment confirmation (`newStatus: PAID`) for its own recipient-side transaction, at the webhook URL configured for the recipient account. The request has no per-recipient callback URL, so a recipient without a configured webhook URL receives no notification. It includes the recipient `split` block, usually with `settlementStatus` `PROCESSING`, and its `referenceCode` is the parent transaction UUID.
 * No notification is sent when a leg's `settlementStatus` changes later. Poll the parent sale, or the recipient-side transaction with the recipient's credentials, using the [transaction query](/api-reference/query-a-transaction) to follow settlement.
 * Payment confirmations for sales without `split` do not change.
@@ -167,7 +167,7 @@ See [Webhook Notifications](/api-reference/webhook#split-payments) for the paylo
 
 ## Errors
 
-Split errors use the standard error envelope, with the split code in `errors[].message`. In checkout validation errors, `errors[].field` is `split` (or `split[n].<field>` for field format errors). Refund errors use `saleToken`, and the recipients endpoints use `split` for `split.notEnabled` and `recipientId` for `split.recipientNotFound`.
+Split errors use the standard error envelope, with the split code in `errors[].message`. For `split.*` checkout errors, `errors[].field` is `split` (or `split[n].<field>` for field format errors); the split and tax data conflict is reported as `taxData.unsupportedSaleType` in `errors[].code` on field `taxData`. The recipient refund rejection (`split.childRefundNotAllowed`) uses `saleToken`, and the recipients endpoints use `split` for `split.notEnabled` and `recipientId` for `split.recipientNotFound`.
 
 ```json
 {

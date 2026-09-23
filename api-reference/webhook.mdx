@@ -124,7 +124,7 @@ Use `saleToken` and `referenceCode` to match the sale and process notifications 
 
 For [split payments](/api-reference/split-payments), the payment confirmation uses the payload above plus an additive `split` block. Payloads of sales without split do not change.
 
-**Parent sale.** Sent to the charge `callbackURL`, or to the webhook URL configured for your account. The `split` block has the same content as the checkout response. Its `settlementStatus` values reflect the moment the notification was built, usually `PENDING`. `percentage` and `externalReference` are `null` when they were not sent for the leg.
+**Parent sale.** Sent to the charge `callbackURL`, or to the webhook URL configured for your account. The `split` block has the same content as the checkout response. Its `settlementStatus` values are a snapshot taken when the notification was first built, usually `PENDING`; automatic delivery retries resend that same snapshot. Query the transaction for the current status. `percentage` and `externalReference` are `null` when they were not sent for the leg.
 
 ```json
 {
