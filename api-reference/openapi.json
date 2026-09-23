@@ -1467,7 +1467,6 @@
                   "split": {
                     "type": "array",
                     "minItems": 1,
-                    "maxItems": 20,
                     "description": "PIX only. Splits the charge between your account (parent) and linked recipients. Requires split to be enabled for your account. Up to 20 recipients per charge by default (limit configurable by PayMee). Each recipient may appear once and cannot be your own account. Percentages are applied to `amount` and rounded down to cents; the rounding remainder stays with the parent. The sum of all legs must not exceed `amount`, and the parent remainder must cover the PayMee fees, which are calculated on the full `amount` and charged to the parent only. Not supported with BOLETO, BOLETO_PIX, CREDIT_CARD, INITIATOR, `recurrence`, scheduled payments, `taxData` or `sellersTransactions`. See [Split payments](/api-reference/split-payments).",
                     "items": {
                       "$ref": "#/components/schemas/SplitInstruction"
@@ -1819,11 +1818,11 @@
                         },
                         "instructions": {
                           "chosen": "PIX",
-                          "name": "PIX",
-                          "label": "Transferência via PIX",
+                          "name": "Pagamento via PIX",
+                          "label": "Pagamento via PIX",
                           "qrCode": {
                             "plain": "00020101021226...6304ABCD",
-                            "url": "https://api.paymee.com.br/payments/pix/qrcode/00000000-0000-4000-8000-000000000000"
+                            "url": "https://api.paymee.com.br/resources/payments/pix/qrcode/00000000-0000-4000-8000-000000000000"
                           }
                         }
                       },
@@ -1845,7 +1844,7 @@
                             "recipientId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
                             "transactionId": "22222222-2222-4222-8222-222222222222",
                             "amount": 12.5,
-                            "percentage": 12.5,
+                            "percentage": null,
                             "externalReference": "ORDER-1001-B",
                             "settlementStatus": "PENDING"
                           }
@@ -5621,7 +5620,7 @@
                               "recipientId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
                               "transactionId": "22222222-2222-4222-8222-222222222222",
                               "amount": 12.5,
-                              "percentage": 12.5,
+                              "percentage": null,
                               "externalReference": "ORDER-1001-B",
                               "settlementStatus": "PROCESSING"
                             }
@@ -10002,15 +10001,15 @@
                   },
                   "Unauthorized access": {
                     "value": {
+                      "status": -2,
+                      "message": "Invalid API Request",
                       "errorCount": 1,
                       "errors": [
                         {
-                          "error": "Forbidden",
-                          "message": "Access Denied"
+                          "message": "Access Denied",
+                          "error": "Forbidden"
                         }
-                      ],
-                      "message": "field validation failure",
-                      "status": -1
+                      ]
                     }
                   }
                 }
@@ -10120,15 +10119,15 @@
                   },
                   "Unauthorized access": {
                     "value": {
+                      "status": -2,
+                      "message": "Invalid API Request",
                       "errorCount": 1,
                       "errors": [
                         {
-                          "error": "Forbidden",
-                          "message": "Access Denied"
+                          "message": "Access Denied",
+                          "error": "Forbidden"
                         }
-                      ],
-                      "message": "field validation failure",
-                      "status": -1
+                      ]
                     }
                   }
                 }
@@ -10257,6 +10256,10 @@
         "type": "object",
         "title": "Parent sale",
         "description": "Split details of the sale created by your account (parent).",
+        "required": [
+          "feePayer",
+          "recipients"
+        ],
         "properties": {
           "feePayer": {
             "type": "string",
@@ -10296,6 +10299,10 @@
         "type": "object",
         "title": "Recipient sale",
         "description": "Split details of a transaction received by a recipient account from a split.",
+        "required": [
+          "role",
+          "origin"
+        ],
         "properties": {
           "role": {
             "type": "string",
@@ -10361,7 +10368,7 @@
       },
       "SplitErrorResponse": {
         "type": "object",
-        "description": "Error envelope. Split error codes are returned in `errors[].message`.",
+        "description": "Error envelope. Split error codes are returned in `errors[].message`. Requests without valid credentials return the shared unauthorized envelope, with `status` -2 and `errors[].error`.",
         "properties": {
           "status": {
             "type": "number",
@@ -10387,6 +10394,11 @@
                 "message": {
                   "type": "string",
                   "example": "split.notEnabled"
+                },
+                "error": {
+                  "type": "string",
+                  "description": "Present only in the unauthorized envelope.",
+                  "example": "Forbidden"
                 }
               }
             }

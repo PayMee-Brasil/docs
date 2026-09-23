@@ -71,7 +71,7 @@ You can mix legs by amount and legs by percentage in the same charge.
 * **Rounding.** Percentage legs are calculated on the charge `amount` and **rounded down** to cents. The rounding remainder stays with the parent. Each resolved leg must be at least `0.01`.
 * **Total.** The sum of all legs must be less than or equal to the charge `amount`.
 * **Fees.** PayMee fees are calculated on the full charge `amount` and charged **to the parent only**. The parent remainder (`amount` minus all legs) must cover these fees, otherwise the request is rejected with `split.parentAmountInsufficientForFees`. Recipients receive their full leg amount, without fees.
-* **Refunds.** Refunds are requested only on the parent sale, through the [refund endpoint](/api-reference/request-a-sale-refund), up to the sale total, and are debited from the parent balance. Recipient balances are not debited. A refund requested on a recipient-side transaction is rejected with `split.childRefundNotAllowed`.
+* **Refunds.** Refunds are requested only on the parent sale, through the [refund endpoint](/api-reference/request-a-sale-refund), and are debited from the parent balance. Recipient balances are not debited, so the parent balance plus its overdraft limit must cover the full refund amount, including the recipients' shares. The sum of all non-cancelled refunds of the sale cannot exceed the sale total (`grossAmount`). A refund requested on a recipient-side transaction is rejected with `split.childRefundNotAllowed`.
 
 ## Response
 
@@ -158,14 +158,16 @@ Recipients are credited asynchronously, after the parent sale is paid. No recipi
 
 ## Webhooks
 
-* The payment confirmation is sent only for the parent sale, to the charge `callbackURL` or to the webhook URL configured for your account. The request has no per-recipient callback URL.
-* The parent notification may include the same `split` block as the checkout response. Treat it as optional: its `settlementStatus` values reflect the moment the notification was built, usually `PENDING`. See [Webhook Notifications](/api-reference/webhook#split-payments).
-* No notification is sent when a leg's `settlementStatus` changes. Poll the parent sale with the [transaction query](/api-reference/query-a-transaction) to follow settlement.
-* A recipient account that has its own webhook URL configured may receive the standard payment confirmation for its recipient-side transaction.
+* **Parent.** When the sale is paid, the payment confirmation for the parent sale is sent to the charge `callbackURL`, or to the webhook URL configured for your account. It includes the parent `split` block, with the same content as the checkout response. Its `settlementStatus` values reflect the moment the notification was built, usually `PENDING`.
+* **Recipients.** Each recipient account receives a payment confirmation (`newStatus: PAID`) for its own recipient-side transaction, at the webhook URL configured for the recipient account. The request has no per-recipient callback URL, so a recipient without a configured webhook URL receives no notification. It includes the recipient `split` block, usually with `settlementStatus` `PROCESSING`, and its `referenceCode` is the parent transaction UUID.
+* No notification is sent when a leg's `settlementStatus` changes later. Poll the parent sale, or the recipient-side transaction with the recipient's credentials, using the [transaction query](/api-reference/query-a-transaction) to follow settlement.
+* Payment confirmations for sales without `split` do not change.
+
+See [Webhook Notifications](/api-reference/webhook#split-payments) for the payloads.
 
 ## Errors
 
-Split validation errors use the standard error envelope. The split code is returned in `errors[].message`, with `errors[].field` set to `split` (or `split[n].<field>` for field format errors):
+Split errors use the standard error envelope, with the split code in `errors[].message`. In checkout validation errors, `errors[].field` is `split` (or `split[n].<field>` for field format errors). Refund errors use `saleToken`, and the recipients endpoints use `split` for `split.notEnabled` and `recipientId` for `split.recipientNotFound`.
 
 ```json
 {
