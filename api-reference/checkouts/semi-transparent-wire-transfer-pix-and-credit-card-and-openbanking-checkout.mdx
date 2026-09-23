@@ -2,6 +2,10 @@
 openapi: post /v1.1/checkout/transparent
 ---
 
+## Split payments
+
+PIX charges can be split between your account and linked recipients with the optional `split` array. Each leg sets a `recipientId` and either an `amount` or a `percentage`. PayMee fees and refunds stay with your account. The response adds a root `split` block. See [Split payments](/api-reference/split-payments) for rules, settlement and error codes.
+
 ## Boleto and BolePix
 
 Use `BOLETO` for a bank boleto or `BOLETO_PIX` for a boleto with a Pix QR code. BolePix offers two ways to pay the same sale; the customer must pay only once.

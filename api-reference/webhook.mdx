@@ -120,6 +120,85 @@ Use `saleToken` and `referenceCode` to match the sale and process notifications 
 
 ---
 
+## Split Payments
+
+For [split payments](/api-reference/split-payments), the payment confirmation uses the payload above plus an additive `split` block. Payloads of sales without split do not change.
+
+**Parent sale.** Sent to the charge `callbackURL`, or to the webhook URL configured for your account. The `split` block has the same content as the checkout response. Its `settlementStatus` values are a snapshot taken when the notification was first built, usually `PENDING`; automatic delivery retries resend that same snapshot. Query the transaction for the current status. `percentage` and `externalReference` are `null` when they were not sent for the leg.
+
+```json
+{
+  "newStatus": "PAID",
+  "saleToken": "00000000-0000-4000-8000-000000000000",
+  "referenceCode": "ORDER-1001",
+  "currency": "BRL",
+  "amount": 100.00,
+  "shopper": {
+    "fullName": "JOHN DOE",
+    "firstName": "JOHN",
+    "lastName": "DOE",
+    "email": "foo@bar.com",
+    "cpf": "00000000000"
+  },
+  "date": "2026-09-23 10:05:00",
+  "split": {
+    "feePayer": "PARENT",
+    "refundLiability": "PARENT",
+    "grossAmount": 100.00,
+    "parentAmount": 52.00,
+    "recipients": [
+      {
+        "recipientId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "transactionId": "11111111-1111-4111-8111-111111111111",
+        "amount": 35.50,
+        "percentage": null,
+        "externalReference": "ORDER-1001-A",
+        "settlementStatus": "PENDING"
+      },
+      {
+        "recipientId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "transactionId": "22222222-2222-4222-8222-222222222222",
+        "amount": 12.50,
+        "percentage": null,
+        "externalReference": "ORDER-1001-B",
+        "settlementStatus": "PENDING"
+      }
+    ]
+  }
+}
+```
+
+**Recipient-side transaction.** Each recipient account receives a payment confirmation for its own recipient-side transaction, at the webhook URL configured for the recipient account. There is no per-recipient callback URL, so a recipient without a configured webhook URL receives no notification. `saleToken` is the recipient-side transaction, `amount` is the leg amount and `referenceCode` is the parent transaction UUID. `settlementStatus` is usually `PROCESSING` at this moment.
+
+```json
+{
+  "newStatus": "PAID",
+  "saleToken": "11111111-1111-4111-8111-111111111111",
+  "referenceCode": "00000000-0000-4000-8000-000000000000",
+  "currency": "BRL",
+  "amount": 35.50,
+  "shopper": {
+    "fullName": "JOHN DOE",
+    "firstName": "JOHN",
+    "lastName": "DOE",
+    "email": "foo@bar.com",
+    "cpf": "00000000000"
+  },
+  "date": "2026-09-23 10:05:00",
+  "split": {
+    "refundLiability": "PARENT",
+    "role": "RECIPIENT",
+    "origin": "SPLIT",
+    "amountReceived": 35.50,
+    "settlementStatus": "PROCESSING"
+  }
+}
+```
+
+No notification is sent when a leg's `settlementStatus` changes later. Query the parent sale, or the recipient-side transaction with the recipient's credentials, using the [transaction query](/api-reference/query-a-transaction) to follow settlement.
+
+---
+
 ## Loan Status Notification
 
 The loan status notification reports credit decision changes for BNPL transactions. It uses a PayMee-owned contract so integrations do not depend on a credit provider's payload.
