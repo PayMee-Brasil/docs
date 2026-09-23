@@ -120,6 +120,52 @@ Use `saleToken` and `referenceCode` to match the sale and process notifications 
 
 ---
 
+## Split Payments
+
+For [split payments](/api-reference/split-payments), the payment confirmation is sent only for the parent sale, using the payload above. There is no per-recipient callback URL, and no notification is sent when a recipient leg's settlement status changes.
+
+The parent notification may include an additive `split` block, with the same content as the checkout response. Treat it as optional. Its `settlementStatus` values reflect the moment the notification was built, usually `PENDING`. Query the parent sale with the [transaction query](/api-reference/query-a-transaction) to follow settlement.
+
+```json
+{
+  "saleToken": "00000000-0000-4000-8000-000000000000",
+  "referenceCode": "ORDER-1001",
+  "currency": "BRL",
+  "amount": 100.00,
+  "shopper": { ... },
+  "date": "2026-09-23 10:05:00",
+  "newStatus": "PAID",
+  "split": {
+    "feePayer": "PARENT",
+    "refundLiability": "PARENT",
+    "grossAmount": 100.00,
+    "parentAmount": 52.00,
+    "recipients": [
+      {
+        "recipientId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "transactionId": "11111111-1111-4111-8111-111111111111",
+        "amount": 35.50,
+        "percentage": null,
+        "externalReference": "ORDER-1001-A",
+        "settlementStatus": "PENDING"
+      },
+      {
+        "recipientId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "transactionId": "22222222-2222-4222-8222-222222222222",
+        "amount": 12.50,
+        "percentage": 12.5,
+        "externalReference": "ORDER-1001-B",
+        "settlementStatus": "PENDING"
+      }
+    ]
+  }
+}
+```
+
+A recipient account that has its own webhook URL configured may receive the standard payment confirmation for its recipient-side transaction.
+
+---
+
 ## Loan Status Notification
 
 The loan status notification reports credit decision changes for BNPL transactions. It uses a PayMee-owned contract so integrations do not depend on a credit provider's payload.

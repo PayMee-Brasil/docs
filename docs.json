@@ -31,6 +31,14 @@
             ]
           },
           {
+            "group": "Split",
+            "pages": [
+              "api-reference/split-payments",
+              "api-reference/split/list-split-recipients",
+              "api-reference/split/get-split-recipient"
+            ]
+          },
+          {
             "group": "Payouts",
             "pages": [
               "api-reference/payouts/individual-payout-request",

@@ -1,0 +1,204 @@
+---
+title: 'Split Payments'
+description: 'Split a PIX charge between your account and linked recipients, with fees and refunds handled by your account.'
+---
+
+Split payments let you divide a single PIX charge between your account (the **parent**) and one or more **recipients**. The payer sees and pays one charge. After payment, PayMee credits each recipient with its share and credits the remainder to the parent.
+
+## Concepts
+
+* **Parent:** the account whose credentials create the charge. The parent pays all PayMee fees and is the only account that can refund the sale.
+* **Recipient:** an account linked to the parent by PayMee operations. Recipients cannot be created or linked through the API. Contact PayMee to enable split for your account and to link recipients.
+* **Leg:** the share of one recipient in a charge. Each leg creates a recipient-side transaction, owned by the recipient account and identified by `transactionId`.
+
+Use the [recipients endpoints](/api-reference/split/list-split-recipients) to find the `recipientId` of each linked recipient.
+
+## Creating a split charge
+
+Send the optional `split` array in [`POST /v1.1/checkout/transparent`](/api-reference/checkouts/semi-transparent-wire-transfer-pix-and-credit-card-and-openbanking-checkout). Each item is one leg:
+
+| Field | Type | Required | Description |
+| :---- | :--- | :------- | :---------- |
+| `recipientId` | string (UUID) | Yes | Recipient identifier from the recipients endpoints. |
+| `amount` | number | One of `amount` or `percentage` | Fixed amount. At least `0.01`, up to two decimal places. |
+| `percentage` | number | One of `amount` or `percentage` | Percentage of the charge `amount`. Greater than `0` and up to `100`, up to four decimal places. |
+| `externalReference` | string | No | Your reference for the leg, up to 100 characters. Control characters are removed and whitespace is trimmed. |
+
+**Example: split by fixed amounts**
+
+```json
+POST /v1.1/checkout/transparent
+{
+  "currency": "BRL",
+  "amount": 100.00,
+  "referenceCode": "ORDER-1001",
+  "maxAge": 120,
+  "paymentMethod": "PIX",
+  "callbackURL": "https://foo.bar/paymeeListener",
+  "shopper": {
+    "id": "24391203",
+    "email": "foo@bar.com",
+    "name": "JOHN DOE",
+    "document": { "type": "CPF", "number": "00000000000" },
+    "phone": { "type": "MOBILE", "number": "11999990000" }
+  },
+  "split": [
+    { "recipientId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "amount": 35.50, "externalReference": "ORDER-1001-A" },
+    { "recipientId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", "amount": 12.50, "externalReference": "ORDER-1001-B" }
+  ]
+}
+```
+
+**Example: split by percentage**
+
+```json
+"split": [
+  { "recipientId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "percentage": 33.3333 },
+  { "recipientId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", "percentage": 12.5 }
+]
+```
+
+For an `amount` of `100.00`, these legs resolve to `33.33` and `12.50`, and the parent keeps `54.17`.
+
+You can mix legs by amount and legs by percentage in the same charge.
+
+## Rules
+
+* **PIX only.** `paymentMethod` must be `PIX`. Split is not supported with `BOLETO`, `BOLETO_PIX`, `CREDIT_CARD` or `INITIATOR`, and cannot be combined with `recurrence`, scheduled payments, `taxData` or the legacy `sellersTransactions` field.
+* **Enablement.** Split must be enabled for your account.
+* **Recipients.** Up to **20** recipients per charge by default. PayMee can configure this limit. Each recipient can appear only once, cannot be your own account and must be active and linked to your account.
+* **`amount` or `percentage`.** Each leg must have exactly one of them.
+* **Rounding.** Percentage legs are calculated on the charge `amount` and **rounded down** to cents. The rounding remainder stays with the parent. Each resolved leg must be at least `0.01`.
+* **Total.** The sum of all legs must be less than or equal to the charge `amount`.
+* **Fees.** PayMee fees are calculated on the full charge `amount` and charged **to the parent only**. The parent remainder (`amount` minus all legs) must cover these fees, otherwise the request is rejected with `split.parentAmountInsufficientForFees`. Recipients receive their full leg amount, without fees.
+* **Refunds.** Refunds are requested only on the parent sale, through the [refund endpoint](/api-reference/request-a-sale-refund), up to the sale total, and are debited from the parent balance. Recipient balances are not debited. A refund requested on a recipient-side transaction is rejected with `split.childRefundNotAllowed`.
+
+## Response
+
+The checkout response includes a `split` block at the root of the body, next to `response`:
+
+```json
+{
+  "status": 0,
+  "message": "success",
+  "response": {
+    "amount": 100.00,
+    "uuid": "00000000-0000-4000-8000-000000000000",
+    "referenceCode": "ORDER-1001",
+    "instructions": { "chosen": "PIX", "qrCode": { "plain": "00020101021226...6304ABCD" } }
+  },
+  "split": {
+    "feePayer": "PARENT",
+    "refundLiability": "PARENT",
+    "grossAmount": 100.00,
+    "parentAmount": 52.00,
+    "recipients": [
+      {
+        "recipientId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "transactionId": "11111111-1111-4111-8111-111111111111",
+        "amount": 35.50,
+        "percentage": null,
+        "externalReference": "ORDER-1001-A",
+        "settlementStatus": "PENDING"
+      },
+      {
+        "recipientId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "transactionId": "22222222-2222-4222-8222-222222222222",
+        "amount": 12.50,
+        "percentage": null,
+        "externalReference": "ORDER-1001-B",
+        "settlementStatus": "PENDING"
+      }
+    ]
+  }
+}
+```
+
+| Field | Description |
+| :---- | :---------- |
+| `feePayer` | Always `PARENT`. |
+| `refundLiability` | Always `PARENT`. |
+| `grossAmount` | Sale total. |
+| `parentAmount` | `grossAmount` minus the sum of all legs, before PayMee fees. |
+| `recipients[].recipientId` | Recipient identifier. |
+| `recipients[].transactionId` | Recipient-side transaction created for the leg. |
+| `recipients[].amount` | Resolved leg amount. |
+| `recipients[].percentage` | Percentage sent in the request, or `null` for legs sent by amount. |
+| `recipients[].externalReference` | Your leg reference, or `null`. |
+| `recipients[].settlementStatus` | See [Settlement status](#settlement-status). |
+
+Without `split` in the request, the response does not change.
+
+## Querying split sales
+
+[`GET /v1.1/transactions/{transactionUUID}`](/api-reference/query-a-transaction) and [`GET /v1.1/transactions`](/api-reference/query-transactions-using-filters) return the same `split` block for parent sales. Query the parent sale to follow the settlement of each leg.
+
+A recipient-side transaction belongs to the recipient account and is returned only with the recipient's credentials. It has the leg amount as its total, the parent transaction UUID as its `referenceCode`, and a recipient variant of the `split` block:
+
+```json
+"split": {
+  "role": "RECIPIENT",
+  "origin": "SPLIT",
+  "refundLiability": "PARENT",
+  "amountReceived": 35.50,
+  "settlementStatus": "SETTLED"
+}
+```
+
+## Settlement status
+
+Recipients are credited asynchronously, after the parent sale is paid. No recipient is credited while the parent sale is unpaid.
+
+| `settlementStatus` | Meaning |
+| :----------------- | :------ |
+| `PENDING` | The leg has not been credited to the recipient yet. |
+| `PROCESSING` | Crediting the recipient is in progress. |
+| `SETTLED` | The leg amount was credited to the recipient balance. |
+| `FAILED` | Crediting failed. PayMee retries it automatically. If a leg stays `FAILED`, contact PayMee support. |
+
+## Webhooks
+
+* The payment confirmation is sent only for the parent sale, to the charge `callbackURL` or to the webhook URL configured for your account. The request has no per-recipient callback URL.
+* The parent notification may include the same `split` block as the checkout response. Treat it as optional: its `settlementStatus` values reflect the moment the notification was built, usually `PENDING`. See [Webhook Notifications](/api-reference/webhook#split-payments).
+* No notification is sent when a leg's `settlementStatus` changes. Poll the parent sale with the [transaction query](/api-reference/query-a-transaction) to follow settlement.
+* A recipient account that has its own webhook URL configured may receive the standard payment confirmation for its recipient-side transaction.
+
+## Errors
+
+Split validation errors use the standard error envelope. The split code is returned in `errors[].message`, with `errors[].field` set to `split` (or `split[n].<field>` for field format errors):
+
+```json
+{
+  "status": -1,
+  "message": "validation failure",
+  "errorCount": 1,
+  "errors": [
+    { "field": "split", "message": "split.recipientNotFound" }
+  ],
+  "main_error_message": "split.recipientNotFound"
+}
+```
+
+| HTTP | Code | Meaning |
+| :--- | :--- | :------ |
+| 400 | `split.notEnabled` | Split is not enabled for your account. |
+| 400 | `split.unsupportedPaymentMethod` | `paymentMethod` is not `PIX`. |
+| 400 | `split.unsupportedRecurrence` | Split cannot be combined with `recurrence`. |
+| 400 | `split.unsupportedSchedule` | Split cannot be combined with scheduled payments. |
+| 400 | `split.contractConflict` | Split cannot be combined with `sellersTransactions`. |
+| 400 | `split.valueRequired` | `split` is empty, or a leg has neither `amount` nor `percentage`. |
+| 400 | `split.valueConflict` | A leg has both `amount` and `percentage`. |
+| 400 | `split.tooManyRecipients` | More legs than the per-charge limit (20 by default). |
+| 400 | `split.amountTooLow` | `amount` is below `0.01` or has more than two decimal places, or a percentage leg resolves below `0.01`. |
+| 400 | `split.percentageOutOfRange` | `percentage` is not greater than 0 and up to 100, or has more than four decimal places. |
+| 400 | `split.duplicateRecipient` | The same `recipientId` appears more than once. |
+| 400 | `split.recipientEqualsParent` | `recipientId` is your own account. |
+| 400 | `split.recipientNotFound` | The recipient does not exist or is not linked to your account. Both cases return this code on purpose. |
+| 400 | `split.recipientInactive` | The recipient is linked but not active. |
+| 400 | `split.externalReferenceTooLong` | `externalReference` is longer than 100 characters. |
+| 400 | `split.sumExceedsAmount` | The sum of all legs is greater than the charge `amount`. |
+| 400 | `split.parentAmountInsufficientForFees` | The parent remainder does not cover the PayMee fees. |
+| 400 | `taxData.unsupportedSaleType` | `taxData` was sent with `split`. This error uses `errors[].code`. |
+| 400 | `split.childRefundNotAllowed` | Refund requested on a recipient-side transaction ([refund endpoint](/api-reference/request-a-sale-refund)). |
+| 403 | `split.notEnabled` | Recipients endpoints: split is not enabled for your account. |
+| 404 | `split.recipientNotFound` | [Get a split recipient](/api-reference/split/get-split-recipient): the recipient does not exist, is not linked to your account or is not active. |
