@@ -9806,7 +9806,7 @@
             }
           },
           "400": {
-            "description": "Bad Request. The request body is malformed or contains invalid data.",
+            "description": "Bad Request. Either the request body is malformed or contains invalid data (`status: -1`), or the acquirer rejected the recurrence (`status: 1002`). For acquirer rejections, `errors[0].code` and `errors[0].message` are returned as received from the acquirer; fix the reported cause and send the request again.",
             "content": {
               "application/json": {
                 "schema": {
@@ -9819,12 +9819,33 @@
                         "type": "object",
                         "properties": {
                           "field": { "type": "string", "example": "referenceCode" },
+                          "code": { "type": "string", "description": "Error code. Present on acquirer rejections.", "example": "PBE7201" },
                           "message": { "type": "string", "example": "referenceCode may not be empty" }
                         }
                       }
                     },
                     "message": { "type": "string", "example": "field validation failure" },
                     "status": { "type": "number", "example": -1 }
+                  }
+                },
+                "examples": {
+                  "VALIDATION_FAILURE": {
+                    "summary": "Invalid request data",
+                    "value": {
+                      "status": -1,
+                      "message": "field validation failure",
+                      "errorCount": 1,
+                      "errors": [{ "field": "referenceCode", "message": "referenceCode may not be empty" }]
+                    }
+                  },
+                  "ACQUIRER_REJECTED": {
+                    "summary": "Recurrence rejected by the acquirer",
+                    "value": {
+                      "status": 1002,
+                      "message": "cannot perform action",
+                      "errorCount": 1,
+                      "errors": [{ "field": "recurrence", "code": "PBE7201", "message": "Contracts already exists for another recurrence" }]
+                    }
                   }
                 }
               }
